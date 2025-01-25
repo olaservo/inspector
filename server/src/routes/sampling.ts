@@ -1,12 +1,13 @@
 import express from "express/index.js";
-import { SamplingStrategyRegistry, stubStrategy } from "zem-sampling-service";
+import { SamplingStrategyRegistry, stubStrategy, zemStrategy } from "zem-sampling-service";
 
 const router = express.Router();
 
-// Initialize registry and register built-in stub strategy
+// Initialize registry and register strategies
 const registry = SamplingStrategyRegistry.getInstance();
 
 registry.register("stub", stubStrategy);
+registry.register("zem", zemStrategy);
 
 router.post("/", async (req, res) => {
   const startTime = Date.now();
