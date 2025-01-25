@@ -9,7 +9,9 @@ const registry = SamplingStrategyRegistry.getInstance();
 registry.register("stub", stubStrategy);
 
 router.post("/", async (req, res) => {
+  const startTime = Date.now();
   try {
+    console.log("Received sampling request:", JSON.stringify(req.body, null, 2));
     const { strategy, config, request } = req.body;
 
     if (!strategy || !request) {
@@ -18,17 +20,27 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Create sampling strategy using registry
+    console.log(`Creating sampling strategy: ${strategy}`);
     const samplingStrategy = registry.create(strategy, config);
 
-    // Use the strategy to handle the request
-    const result = await samplingStrategy.handleSamplingRequest(request);
+    console.log("Starting sampling request handling");
+    const result = await Promise.race([
+      samplingStrategy.handleSamplingRequest(request),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Server timeout after 25 seconds")), 25000)
+      )
+    ]);
 
+    const duration = Date.now() - startTime;
+    console.log(`Sampling request completed in ${duration}ms`);
+    
     res.json(result);
   } catch (error) {
-    console.error("Error handling sampling request:", error);
+    const duration = Date.now() - startTime;
+    console.error(`Error handling sampling request after ${duration}ms:`, error);
     res.status(500).json({
-      error: error instanceof Error ? error.message : "Unknown error occurred"
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+      duration
     });
   }
 });

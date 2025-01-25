@@ -34,8 +34,11 @@ const { values } = parseArgs({
 });
 
 const app = express();
-app.use(cors());
-app.use(express.json()); // Add JSON body parsing middleware
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type']
+}));
 
 let webAppTransports: SSEServerTransport[] = [];
 
@@ -153,8 +156,8 @@ app.get("/config", (req, res) => {
   }
 });
 
-// Add sampling routes
-app.use("/api/sampling", samplingRoutes);
+// Add sampling routes with JSON parsing middleware
+app.use("/api/sampling", express.json(), samplingRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
