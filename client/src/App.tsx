@@ -91,10 +91,13 @@ const App = () => {
   const nextRequestId = useRef(0);
   const rootsRef = useRef<Root[]>([]);
 
-  const handleApproveSampling = (id: number, result: CreateMessageResult) => {
+  const handleApproveSampling = (id: number, result: unknown) => {
     setPendingSampleRequests((prev) => {
       const request = prev.find((r) => r.id === id);
-      request?.resolve(result);
+      if (request) {
+        const typedResult = result as CreateMessageResult;
+        request.resolve(typedResult);
+      }
       return prev.filter((r) => r.id !== id);
     });
   };

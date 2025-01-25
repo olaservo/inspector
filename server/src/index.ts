@@ -14,6 +14,7 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import express from "express";
 import mcpProxy from "./mcpProxy.js";
 import { findActualExecutable } from "spawn-rx";
+import samplingRoutes from "./routes/sampling.js";
 
 const defaultEnvironment = {
   ...getDefaultEnvironment(),
@@ -34,6 +35,7 @@ const { values } = parseArgs({
 
 const app = express();
 app.use(cors());
+app.use(express.json()); // Add JSON body parsing middleware
 
 let webAppTransports: SSEServerTransport[] = [];
 
@@ -151,5 +153,10 @@ app.get("/config", (req, res) => {
   }
 });
 
+// Add sampling routes
+app.use("/api/sampling", samplingRoutes);
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {});
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

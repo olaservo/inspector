@@ -8,6 +8,7 @@ import {
   ProgressNotificationSchema,
   Request,
   Result,
+  Root,
   ServerCapabilities,
 } from "@modelcontextprotocol/sdk/types.js";
 import { useState } from "react";
@@ -27,8 +28,12 @@ interface UseConnectionOptions {
   requestTimeout?: number;
   onNotification?: (notification: Notification) => void;
   onStdErrNotification?: (notification: Notification) => void;
-  onPendingRequest?: (request: any, resolve: any, reject: any) => void;
-  getRoots?: () => any[];
+  onPendingRequest?: (
+    request: z.infer<typeof CreateMessageRequestSchema>,
+    resolve: (result: Result) => void,
+    reject: (error: Error) => void
+  ) => void;
+  getRoots?: () => Root[];
 }
 
 export function useConnection({

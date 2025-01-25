@@ -38,7 +38,8 @@
     "concurrently": "^9.0.1",
     "shell-quote": "^1.8.2",
     "spawn-rx": "^5.1.0",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "zem-sampling-service": "file:../zem-sampling-service"
   },
   "devDependencies": {
     "@types/node": "^22.7.5",
