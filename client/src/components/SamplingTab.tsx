@@ -55,9 +55,6 @@ const SamplingTab = ({ pendingRequests, onApprove, onReject }: Props) => {
 
   const handleApprove = async (id: number, request: z.infer<typeof CreateMessageRequestSchema>) => {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
       const response = await fetch("http://localhost:3000/api/sampling", {
         method: "POST",
         headers: {
@@ -67,11 +64,8 @@ const SamplingTab = ({ pendingRequests, onApprove, onReject }: Props) => {
           strategy: config.strategy,
           config: config.config,
           request
-        }),
-        signal: controller.signal
+        })
       });
-
-      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error("Failed to process sampling request");
@@ -82,11 +76,7 @@ const SamplingTab = ({ pendingRequests, onApprove, onReject }: Props) => {
     } catch (error: unknown) {
       console.error("Error processing sampling request:", error);
       if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          alert('Request timed out after 30 seconds. Please try again.');
-        } else {
-          alert(`Error processing sampling request: ${error.message}`);
-        }
+        alert(`Error processing sampling request: ${error.message}`);
       } else {
         alert('Error processing sampling request. Please try again.');
       }

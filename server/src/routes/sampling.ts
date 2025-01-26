@@ -28,7 +28,7 @@ router.post("/", async (req, res) => {
     const result = await Promise.race([
       samplingStrategy.handleSamplingRequest(request),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Server timeout after 25 seconds")), 25000)
+        setTimeout(() => reject(new Error("Server timeout after 60 seconds")), 60000)
       )
     ]);
 
