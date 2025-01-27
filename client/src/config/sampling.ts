@@ -56,17 +56,8 @@ export const availableStrategies: SamplingStrategyDefinition[] = [
     requiresConfig: false
   },
   {
-    id: "zem",
-    name: "Zem Strategy",
-    requiresConfig: true,
-    configFields: [
-      {
-        name: "openRouterApiKey",
-        type: "string",
-        label: "OpenRouter API Key",
-        placeholder: "Enter your OpenRouter API key",
-        required: true
-      }
-    ]
+    id: "openrouter",
+    name: "Open Router Strategy",
+    requiresConfig: false,
   }
 ];

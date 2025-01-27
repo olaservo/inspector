@@ -1,5 +1,5 @@
 import express from "express/index.js";
-import { SamplingStrategyRegistry, stubStrategy, zemStrategy } from "zem-sampling-service";
+import { SamplingStrategyRegistry, stubStrategy, openRouterStrategy } from "mcp-sampling-service";
 
 const router = express.Router();
 
@@ -7,7 +7,7 @@ const router = express.Router();
 const registry = SamplingStrategyRegistry.getInstance();
 
 registry.register("stub", stubStrategy);
-registry.register("zem", zemStrategy);
+registry.register("openrouter", openRouterStrategy);
 
 router.post("/", async (req, res) => {
   const startTime = Date.now();

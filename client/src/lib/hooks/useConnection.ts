@@ -16,7 +16,7 @@ import { toast } from "react-toastify";
 import { Notification, StdErrNotificationSchema } from "../notificationTypes";
 import { z } from "zod";
 
-const DEFAULT_REQUEST_TIMEOUT_MSEC = 10000;
+const DEFAULT_REQUEST_TIMEOUT_MSEC = 60000;
 
 interface UseConnectionOptions {
   transportType: "stdio" | "sse";
@@ -80,7 +80,7 @@ export function useConnection({
     try {
       const abortController = new AbortController();
       const timeoutId = setTimeout(() => {
-        abortController.abort("Request timed out");
+        abortController.abort(`Request timed out after ${requestTimeout}ms`);
       }, requestTimeout);
 
       let response;

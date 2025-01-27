@@ -33,7 +33,7 @@
     "express": "^4.21.0",
     "raw-body": "^3.0.0",
     "ws": "^8.18.0",
-    "zem-sampling-service": "file:../../../zem-sampling-service",
+    "mcp-sampling-service": "file:../../../mcp-sampling-service",
     "zod": "^3.23.8"
   }
 }
