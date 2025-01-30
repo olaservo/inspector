@@ -35,7 +35,11 @@ const { values } = parseArgs({
 
 const app = express();
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: [
+    'http://localhost:5173', 
+    'http://127.0.0.1:5173',
+    'https://inspector-client-git-sampler-olaservos-projects.vercel.app'
+  ],
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
