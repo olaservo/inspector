@@ -37,6 +37,8 @@ const { values } = parseArgs({
     "sse-server": {
       type: "string",
     },
+    env: { type: "string", default: "" },
+    args: { type: "string", default: "" },
   },
 });
 
