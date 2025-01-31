@@ -15,6 +15,7 @@ import { availableStrategies, CreateMessageResult } from "@/config/sampling";
 import { CreateMessageRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { useState } from "react";
+import ErrorDisplay from "./ErrorDisplay";
 
 export type PendingRequest = {
   id: number;
@@ -37,6 +38,7 @@ const SamplingTab = ({ pendingRequests, onApprove, onReject }: Props) => {
   );
 
   const handleStrategyChange = (value: string) => {
+    setError(null);
     setConfig({
       strategy: value,
       config: {}
@@ -45,6 +47,7 @@ const SamplingTab = ({ pendingRequests, onApprove, onReject }: Props) => {
   };
 
   const handleConfigChange = (field: string, value: string) => {
+    setError(null);
     const newValues = { ...configValues, [field]: value };
     setConfigValues(newValues);
     setConfig({
@@ -53,7 +56,23 @@ const SamplingTab = ({ pendingRequests, onApprove, onReject }: Props) => {
     });
   };
 
+  const [error, setError] = useState<unknown>(null);
+  const [processingRequests, setProcessingRequests] = useState<Set<number>>(new Set());
+
+  const handleReject = (id: number) => {
+    setProcessingRequests(prev => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    setError(null);
+    onReject(id);
+  };
+
   const handleApprove = async (id: number, request: z.infer<typeof CreateMessageRequestSchema>) => {
+    setError(null);
+    setProcessingRequests(prev => new Set([...prev, id]));
+    
     try {
       const response = await fetch("http://localhost:3000/api/sampling", {
         method: "POST",
@@ -67,19 +86,27 @@ const SamplingTab = ({ pendingRequests, onApprove, onReject }: Props) => {
         })
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        throw new Error("Failed to process sampling request");
+        throw new Error(JSON.stringify(data));
       }
 
-      const result = await response.json() as CreateMessageResult;
-      onApprove(id, result);
+      // Call onApprove with the actual API response
+      onApprove(id, data as CreateMessageResult);
     } catch (error: unknown) {
       console.error("Error processing sampling request:", error);
-      if (error instanceof Error) {
-        alert(`Error processing sampling request: ${error.message}`);
-      } else {
-        alert('Error processing sampling request. Please try again.');
-      }
+      setError(error);
+      // Call onApprove with an error result to properly represent the failure
+      onApprove(id, {
+        model: "error",
+        stopReason: "api_error",
+        role: "assistant",
+        content: {
+          type: "text",
+          text: error instanceof Error ? error.message : "Unknown error occurred"
+        }
+      });
     }
   };
 
@@ -115,15 +142,19 @@ const SamplingTab = ({ pendingRequests, onApprove, onReject }: Props) => {
           ))}
         </div>
 
-        <Alert>
-          <AlertDescription>
-            When the server requests LLM sampling, requests will appear here for approval.
-          </AlertDescription>
-        </Alert>
+        {error ? (
+          <ErrorDisplay error={error} />
+        ) : (
+          <Alert>
+            <AlertDescription>
+              When the server requests LLM sampling, requests will appear here for approval.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Recent Requests</h3>
-          {pendingRequests.map((request) => (
+          {pendingRequests.filter(request => !processingRequests.has(request.id)).map((request) => (
             <div key={request.id} className="p-4 border rounded-lg space-y-4">
               <pre className="bg-gray-50 p-2 rounded">
                 {JSON.stringify(request.request, null, 2)}
@@ -132,7 +163,7 @@ const SamplingTab = ({ pendingRequests, onApprove, onReject }: Props) => {
                 <Button onClick={() => handleApprove(request.id, request.request)}>
                   Approve
                 </Button>
-                <Button variant="outline" onClick={() => onReject(request.id)}>
+              <Button variant="outline" onClick={() => handleReject(request.id)}>
                   Reject
                 </Button>
               </div>
