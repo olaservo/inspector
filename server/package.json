@@ -31,7 +31,7 @@
     "express": "^4.21.0",
     "raw-body": "^3.0.0",
     "ws": "^8.18.0",
-    "mcp-sampling-service": "^0.2.1",
+    "mcp-sampling-service": "^0.2.2",
     "zod": "^3.23.8"
   }
 }
