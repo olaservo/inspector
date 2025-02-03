@@ -248,9 +248,13 @@ const App = () => {
           setArgs(data.defaultArgs);
         }
       })
-      .catch((error) =>
-        console.error("Error fetching default environment:", error),
-      );
+      .catch((error) => {
+        console.error("Error fetching default environment:", error);
+        setErrors((prev) => ({
+          ...prev,
+          resources: "Error fetching default environment",
+        }));
+      });
   }, []);
 
   useEffect(() => {

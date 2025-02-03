@@ -1,4 +1,5 @@
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SamplingConfigComponent } from "../lib/contexts/SamplingConfig";
 import { Button } from "@/components/ui/button";
 import { TabsContent } from "@/components/ui/tabs";
 import {
@@ -10,12 +11,17 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { useSamplingConfig } from "@/lib/contexts/useSamplingConfig";
-import { availableStrategies, CreateMessageResult } from "@/config/sampling";
+import type { CreateMessageResult } from "@modelcontextprotocol/sdk/types.js";
 import { CreateMessageRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import type { SamplingStrategyDefinition } from "mcp-sampling-service";
 import { z } from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ErrorDisplay from "./ErrorDisplay";
+
+interface SamplingConfig {
+  strategy: string;
+  config: Record<string, string | number | boolean>;
+}
 
 export type PendingRequest = {
   id: number;
@@ -29,8 +35,22 @@ export type Props = {
 };
 
 const SamplingTab = ({ pendingRequests, onApprove, onReject }: Props) => {
-  const { config, setConfig } = useSamplingConfig();
-  const selectedStrategy = availableStrategies.find(s => s.id === config.strategy);
+  const [strategies, setStrategies] = useState<SamplingStrategyDefinition[]>([]);
+  const [config, setConfig] = useState<SamplingConfig>({
+    strategy: "stub",
+    config: {}
+  });
+  const selectedStrategy = strategies.find(s => s.id === config.strategy);
+
+  useEffect(() => {
+    fetch("http://localhost:3000/api/sampling/strategies")
+      .then(res => res.json())
+      .then(data => setStrategies(data))
+      .catch(error => {
+        console.error("Error fetching sampling strategies:", error);
+        setError(error);
+      });
+  }, []);
   const [configValues, setConfigValues] = useState<Record<string, string>>(
     Object.fromEntries(
       selectedStrategy?.configFields?.map(field => [field.name, (config.config[field.name] as string) || '']) || []
@@ -113,6 +133,7 @@ const SamplingTab = ({ pendingRequests, onApprove, onReject }: Props) => {
   return (
     <TabsContent value="sampling" className="h-96">
       <div className="space-y-4">
+        <SamplingConfigComponent />
         <div className="flex items-end gap-4 p-4 border rounded">
           <div className="space-y-2">
             <Label>Sampling Strategy</Label>
@@ -121,7 +142,7 @@ const SamplingTab = ({ pendingRequests, onApprove, onReject }: Props) => {
                 <SelectValue placeholder="Select strategy" />
               </SelectTrigger>
               <SelectContent>
-                {availableStrategies.map(strategy => (
+                {strategies.map((strategy: SamplingStrategyDefinition) => (
                   <SelectItem key={strategy.id} value={strategy.id}>
                     {strategy.name}
                   </SelectItem>

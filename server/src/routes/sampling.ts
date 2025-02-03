@@ -1,13 +1,15 @@
 import express from "express/index.js";
-import { SamplingStrategyRegistry, stubStrategy, openRouterStrategy } from "mcp-sampling-service";
+import { initializeSamplingService } from "mcp-sampling-service";
 
 const router = express.Router();
 
-// Initialize registry and register strategies
-const registry = SamplingStrategyRegistry.getInstance();
+// Initialize sampling service with default strategies
+const registry = initializeSamplingService();
 
-registry.register("stub", stubStrategy);
-registry.register("openrouter", openRouterStrategy);
+// Get available sampling strategies
+router.get("/strategies", (req, res) => {
+  res.json(registry.getStrategyDefinitions());
+});
 
 router.post("/", async (req, res) => {
   const startTime = Date.now();
