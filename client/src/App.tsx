@@ -2,6 +2,7 @@ import {
   ClientRequest,
   CompatibilityCallToolResult,
   CompatibilityCallToolResultSchema,
+  CreateMessageRequest,
   CreateMessageResult,
   EmptyResultSchema,
   GetPromptResultSchema,
@@ -41,7 +42,7 @@ import PingTab from "./components/PingTab";
 import PromptsTab, { Prompt } from "./components/PromptsTab";
 import ResourcesTab from "./components/ResourcesTab";
 import RootsTab from "./components/RootsTab";
-import SamplingTab, { PendingRequest } from "./components/SamplingTab";
+import SamplingTab from "./components/SamplingTab";
 import Sidebar from "./components/Sidebar";
 import ToolsTab from "./components/ToolsTab";
 
@@ -49,18 +50,18 @@ const params = new URLSearchParams(window.location.search);
 const PROXY_PORT = params.get("proxyPort") ?? "3000";
 const PROXY_SERVER_URL = `http://localhost:${PROXY_PORT}`;
 
-const App = () => {
-  // Handle OAuth callback route
-  if (window.location.pathname === "/oauth/callback") {
-    const OAuthCallback = React.lazy(
-      () => import("./components/OAuthCallback"),
-    );
-    return (
-      <Suspense fallback={<div>Loading...</div>}>
-        <OAuthCallback />
-      </Suspense>
-    );
-  }
+const OAuthCallbackRoute = () => {
+  const OAuthCallback = React.lazy(
+    () => import("./components/OAuthCallback"),
+  );
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <OAuthCallback />
+    </Suspense>
+  );
+};
+
+const MainApp = () => {
   const [resources, setResources] = useState<Resource[]>([]);
   const [resourceTemplates, setResourceTemplates] = useState<
     ResourceTemplate[]
@@ -100,7 +101,9 @@ const App = () => {
 
   const [pendingSampleRequests, setPendingSampleRequests] = useState<
     Array<
-      PendingRequest & {
+      {
+        id: number;
+        request: CreateMessageRequest;
         resolve: (result: CreateMessageResult) => void;
         reject: (error: Error) => void;
       }
@@ -144,6 +147,18 @@ const App = () => {
 
   const { height: historyPaneHeight, handleDragStart } = useDraggablePane(300);
 
+  const clearError = (tabKey: keyof typeof errors) => {
+    setErrors((prev) => ({ ...prev, [tabKey]: null }));
+  };
+
+  const clearAllErrors = () => {
+    setErrors({
+      resources: null,
+      prompts: null,
+      tools: null
+    });
+  };
+
   const {
     connectionStatus,
     serverCapabilities,
@@ -159,6 +174,7 @@ const App = () => {
     sseUrl,
     env,
     proxyServerUrl: PROXY_SERVER_URL,
+    onConnectionSuccess: clearAllErrors,
     onNotification: (notification) => {
       setNotifications((prev) => [...prev, notification as ServerNotification]);
     },
@@ -168,7 +184,7 @@ const App = () => {
         notification as StdErrNotification,
       ]);
     },
-    onPendingRequest: (request, resolve, reject) => {
+    onPendingRequest: (request: CreateMessageRequest, resolve: (result: CreateMessageResult) => void, reject: (error: Error) => void) => {
       setPendingSampleRequests((prev) => [
         ...prev,
         { id: nextRequestId.current++, request, resolve, reject },
@@ -259,10 +275,6 @@ const App = () => {
       window.location.hash = "resources";
     }
   }, []);
-
-  const clearError = (tabKey: keyof typeof errors) => {
-    setErrors((prev) => ({ ...prev, [tabKey]: null }));
-  };
 
   const listResources = async () => {
     const response = await makeRequest(
@@ -590,6 +602,13 @@ const App = () => {
       </div>
     </div>
   );
+};
+
+const App = () => {
+  if (window.location.pathname === "/oauth/callback") {
+    return <OAuthCallbackRoute />;
+  }
+  return <MainApp />;
 };
 
 export default App;

@@ -6,11 +6,14 @@ import {
 import {
   ClientNotification,
   ClientRequest,
+  CreateMessageRequest,
   CreateMessageRequestSchema,
+  CreateMessageResult,
   ListRootsRequestSchema,
   ProgressNotificationSchema,
   Request,
   Result,
+  Root,
   ServerCapabilities,
 } from "@modelcontextprotocol/sdk/types.js";
 import { useState } from "react";
@@ -32,8 +35,13 @@ interface UseConnectionOptions {
   requestTimeout?: number;
   onNotification?: (notification: Notification) => void;
   onStdErrNotification?: (notification: Notification) => void;
-  onPendingRequest?: (request: any, resolve: any, reject: any) => void;
-  getRoots?: () => any[];
+  onPendingRequest?: (
+    request: CreateMessageRequest,
+    resolve: (result: CreateMessageResult) => void,
+    reject: (error: Error) => void
+  ) => void;
+  onConnectionSuccess?: () => void;
+  getRoots?: () => Root[];
 }
 
 export function useConnection({
@@ -47,6 +55,7 @@ export function useConnection({
   onNotification,
   onStdErrNotification,
   onPendingRequest,
+  onConnectionSuccess,
   getRoots,
 }: UseConnectionOptions) {
   const [connectionStatus, setConnectionStatus] = useState<
@@ -255,6 +264,9 @@ export function useConnection({
 
       setMcpClient(client);
       setConnectionStatus("connected");
+      if (onConnectionSuccess) {
+        onConnectionSuccess();
+      }
     } catch (e) {
       console.error(e);
       setConnectionStatus("error");
