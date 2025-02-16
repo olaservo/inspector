@@ -6,12 +6,11 @@
   "type": "module",
   "main": "main.js",
   "scripts": {
-    "dev": "vite & wait-on http://localhost:5173 && electron dist-electron/main.js",
-    "build": "npm run build:ts && npm run build:vite && npm run build:electron",
-    "build:ts": "tsc",
-    "build:vite": "vite build",
-    "build:electron": "electron-builder",
-    "preview": "vite preview"
+    "dev": "vite build --watch & wait-on http://localhost:5173 && electron dist-electron/main.js",
+    "build": "npm run build:electron && npm run build:package",
+    "build:electron": "vite build",
+    "build:package": "electron-builder --dir --config electron-builder.json5",
+    "preview": "electron dist-electron/main.js"
   },
   "dependencies": {
     "@modelcontextprotocol/inspector-client": "0.4.0"

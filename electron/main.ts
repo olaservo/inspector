@@ -1,42 +1,37 @@
 import { app, BrowserWindow } from 'electron'
-import path from 'path'
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
 
-// The built directory structure
-//
-// ├─┬ dist-electron
-// │ ├─┬ main
-// │ │ └── index.js    > Electron-Main
-// │ └─┬ preload
-// │   └── index.js    > Preload-Scripts
-// ├─┬ dist
-// │ └── index.html    > Electron-Renderer
+// In development, we load from the Vite dev server (localhost:5173)
+// In production, we load from the built client files in client/dist
+const isDev = process.env.VITE_DEV_SERVER_URL !== undefined
 
-process.env.DIST_ELECTRON = path.join(__dirname, '..')
-process.env.DIST = path.join(process.env.DIST_ELECTRON as string, '../dist')
-process.env.PUBLIC = process.env.VITE_DEV_SERVER_URL
-  ? path.join(process.env.DIST_ELECTRON as string, '../public')
-  : process.env.DIST as string
+// Set up paths for production using ESM compatible methods
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+const DIST_ELECTRON = join(__dirname, '..')
+const DIST_CLIENT = join(DIST_ELECTRON, 'dist')
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: join(__dirname, 'preload.js'),
       nodeIntegration: true,
       contextIsolation: false,
     },
   })
 
-  // Load the local URL for development or the local file for production.
-  if (process.env.VITE_DEV_SERVER_URL) {
-    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
+  // Load the appropriate URL/file based on environment
+  if (isDev) {
+    // Development: Load from Vite dev server
+    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL as string)
     mainWindow.webContents.openDevTools()
   } else {
-    if (!process.env.DIST) {
-      throw new Error('DIST environment variable is not set')
-    }
-    mainWindow.loadFile(path.join(process.env.DIST, 'index.html'))
+    // Production: Load from built files in the dist directory
+    const indexPath = join(DIST_CLIENT, 'index.html')
+    mainWindow.loadFile(indexPath)
   }
 }
 

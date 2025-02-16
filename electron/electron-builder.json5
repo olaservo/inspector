@@ -9,19 +9,19 @@
     "buildResources": "build"
   },
   "files": [
-  {
-    "from": ".",
-    "filter": ["package.json"]
-  },
-  {
-    "from": "../client/dist",
-    "to": "."
-  },
-  {
-    "from": "../dist-electron",
-    "to": "."
-  }
-],
+    {
+      "from": ".",
+      "filter": ["package.json"]
+    },
+    {
+      "from": "dist-electron",
+      "to": "."
+    },
+    {
+      "from": "../client/dist",
+      "to": "dist"
+    }
+  ],
   "mac": {
     "target": [
       "dmg"
