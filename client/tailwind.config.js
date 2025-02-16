@@ -5,6 +5,12 @@ export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      backgroundColor: {
+        background: "hsl(var(--background))"
+      },
+      borderColor: {
+        DEFAULT: "hsl(var(--border))"
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",

@@ -7,6 +7,7 @@
   "homepage": "https://modelcontextprotocol.io",
   "bugs": "https://github.com/modelcontextprotocol/inspector/issues",
   "type": "module",
+  "main": "dist-electron/main.js",
   "bin": {
     "mcp-inspector": "./bin/cli.js"
   },
@@ -14,17 +15,22 @@
     "bin",
     "client/bin",
     "client/dist",
-    "server/build"
+    "client/dist-electron",
+    "server/build",
+    "dist",
+    "dist-electron"
   ],
   "workspaces": [
     "client",
-    "server"
+    "server",
+    "electron"
   ],
   "scripts": {
-    "dev": "concurrently \"cd client && npm run dev\" \"cd server && npm run dev\"",
+    "dev": "concurrently \"cd client && npm run dev\" \"cd server && npm run dev\" \"cd electron && npm run dev\"",
     "build-server": "cd server && npm run build",
     "build-client": "cd client && npm run build",
-    "build": "npm run build-server && npm run build-client",
+    "build-electron": "cd electron && npm run build",
+    "build": "npm run build-server && npm run build-client && npm run build-electron",
     "start-server": "cd server && npm run start",
     "start-client": "cd client && npm run preview",
     "start": "node ./bin/cli.js",
