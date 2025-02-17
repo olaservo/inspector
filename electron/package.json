@@ -1,14 +1,14 @@
 {
-  "name": "@modelcontextprotocol/inspector-electron",
+  "name": "@dandeliongold/inspector-electron",
   "version": "0.4.0",
   "description": "Electron wrapper for MCP Inspector",
-  "author": "Anthropic, PBC (https://anthropic.com)",
+  "author": "Dandelion Gold, LLC (original Inspector app by Anthropic, PBC)",
   "type": "module",
-  "main": "main.js",
+  "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "vite build --watch & wait-on http://localhost:5173 && electron dist-electron/main.js",
+    "dev": "vite build --mode main && vite build --mode preload && electron dist-electron/main.js --enable-logging --trace-warnings",
     "build": "npm run build:electron && npm run build:package",
-    "build:electron": "vite build",
+    "build:electron": "vite build --mode main && vite build --mode preload",
     "build:package": "electron-builder --dir --config electron-builder.json5",
     "preview": "electron dist-electron/main.js"
   },
