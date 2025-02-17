@@ -1,10 +1,55 @@
 import express from "express/index.js";
-import { initializeSamplingService } from "mcp-sampling-service";
+import { SamplingStrategyRegistry, stubStrategy, openRouterStrategy } from "mcp-sampling-service";
 
 const router = express.Router();
 
-// Initialize sampling service with default strategies
-const registry = initializeSamplingService();
+// Get registry instance and register strategies
+const registry = SamplingStrategyRegistry.getInstance();
+
+// Register stub strategy
+registry.register('stub', stubStrategy, {
+  id: 'stub',
+  name: 'Stub Strategy',
+  configFields: [],
+  requiresConfig: false
+});
+
+// Register OpenRouter strategy
+registry.register('openrouter', openRouterStrategy, {
+  id: 'openrouter',
+  name: 'OpenRouter Strategy',
+  requiresConfig: true,
+  configFields: [
+    {
+      name: 'model',
+      type: 'string',
+      label: 'Model Override',
+      placeholder: 'Optional specific model to use',
+      required: false
+    },
+    {
+      name: 'speedPriority',
+      type: 'number',
+      label: 'Speed Priority',
+      placeholder: '0-1 priority for response speed',
+      required: false
+    },
+    {
+      name: 'intelligencePriority',
+      type: 'number',
+      label: 'Intelligence Priority', 
+      placeholder: '0-1 priority for model capability',
+      required: false
+    },
+    {
+      name: 'costPriority',
+      type: 'number',
+      label: 'Cost Priority',
+      placeholder: '0-1 priority for cost efficiency',
+      required: false
+    }
+  ]
+});
 
 // Get available sampling strategies
 router.get("/strategies", (req, res) => {
@@ -23,8 +68,20 @@ router.post("/", async (req, res) => {
       });
     }
 
+    if (!process.env.OPENROUTER_API_KEY) {
+      return res.status(500).json({
+        error: "OpenRouter API key not configured"
+      });
+    }
+
     console.log(`Creating sampling strategy: ${strategy}`);
-    const samplingStrategy = registry.create(strategy, config);
+    const strategyConfig = strategy === 'openrouter' ? {
+      ...config,
+      apiKey: process.env.OPENROUTER_API_KEY,
+      defaultModel: process.env.OPENROUTER_DEFAULT_MODEL || 'anthropic/claude-3.5-sonnet'
+    } : config;
+    
+    const samplingStrategy = registry.create(strategy, strategyConfig);
 
     console.log("Starting sampling request handling");
     const result = await Promise.race([
