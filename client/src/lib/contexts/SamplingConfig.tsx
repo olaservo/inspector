@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { SamplingConfig } from 'mcp-sampling-service';
+import { SamplingConfig, ModelConfig } from 'mcp-sampling-service';
+import JsonEditor from '../../components/JsonEditor';
 
 interface OpenRouterConfig {
   defaultModel: string;
   hasApiKey: boolean;
+  allowedModels?: ModelConfig[];
 }
 
 export function SamplingConfigComponent() {
@@ -11,6 +13,7 @@ export function SamplingConfigComponent() {
   const [openRouterConfig, setOpenRouterConfig] = useState<OpenRouterConfig | null>(null);
   const [apiKey, setApiKey] = useState('');
   const [defaultModel, setDefaultModel] = useState('');
+  const [allowedModels, setAllowedModels] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,6 +30,7 @@ export function SamplingConfigComponent() {
       .then(data => {
         setOpenRouterConfig(data);
         setDefaultModel(data.defaultModel);
+        setAllowedModels(JSON.stringify(data.allowedModels || [], null, 2));
       })
       .catch(error => console.error('Error fetching OpenRouter config:', error));
   }, []);
@@ -36,6 +40,32 @@ export function SamplingConfigComponent() {
       setSaving(true);
       setError(null);
 
+      // Validate allowedModels JSON
+      let parsedAllowedModels: ModelConfig[] | undefined;
+      if (allowedModels.trim()) {
+        try {
+          parsedAllowedModels = JSON.parse(allowedModels);
+          if (!Array.isArray(parsedAllowedModels)) {
+            throw new Error('Allowed models must be an array');
+          }
+          // Validate each model
+          for (const model of parsedAllowedModels) {
+            if (!model.id || typeof model.id !== 'string') {
+              throw new Error('Each model must have a string id');
+            }
+            for (const score of ['speedScore', 'intelligenceScore', 'costScore'] as const) {
+              const value = model[score];
+              if (typeof value !== 'number' || value < 0 || value > 1) {
+                throw new Error(`${score} must be a number between 0 and 1`);
+              }
+            }
+          }
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : 'Invalid JSON format';
+          throw new Error(`Invalid allowed models format: ${message}`);
+        }
+      }
+
       const response = await fetch('/api/config/openrouter', {
         method: 'POST',
         headers: {
@@ -44,6 +74,7 @@ export function SamplingConfigComponent() {
         body: JSON.stringify({
           apiKey: apiKey || undefined,
           defaultModel: defaultModel || undefined,
+          allowedModels: parsedAllowedModels,
         }),
       });
 
@@ -70,7 +101,6 @@ export function SamplingConfigComponent() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-medium mb-4">Sampling Configuration</h2>
         
         {/* OpenRouter Configuration */}
         <div className="space-y-4">
@@ -83,7 +113,7 @@ export function SamplingConfigComponent() {
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder={openRouterConfig?.hasApiKey ? '••••••••' : 'Enter API key'}
+                placeholder={openRouterConfig?.hasApiKey ? '••••••••••••••••••••••••' : 'Enter API key'}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
               />
             </label>
@@ -102,6 +132,34 @@ export function SamplingConfigComponent() {
             </label>
           </div>
 
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">
+              Allowed Models
+              <p className="text-sm text-gray-500 mt-1 mb-2">
+                Example format:
+                <pre className="bg-gray-50 p-2 rounded mt-1 text-xs">
+{`[
+  {
+    "id": "anthropic/claude-3.5-sonnet",
+    "speedScore": 0.65,
+    "intelligenceScore": 0.75,
+    "costScore": 0.70
+  }
+]`}
+                </pre>
+              </p>
+              <div className="mt-1 h-64">
+                <JsonEditor
+                  value={allowedModels}
+                  onChange={setAllowedModels}
+                />
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                JSON array of models with scores (0-1) for speed, intelligence, and cost
+              </p>
+            </label>
+          </div>
+
           {error && (
             <div className="text-red-500 text-sm">{error}</div>
           )}
@@ -114,16 +172,6 @@ export function SamplingConfigComponent() {
             {saving ? 'Saving...' : 'Save Settings'}
           </button>
         </div>
-
-        {/* Display Sampling Strategies */}
-        {strategies && (
-          <div className="mt-6">
-            <h3 className="text-md font-medium mb-2">Available Strategies</h3>
-            <pre className="bg-gray-100 p-4 rounded">
-              {JSON.stringify(strategies, null, 2)}
-            </pre>
-          </div>
-        )}
       </div>
     </div>
   );

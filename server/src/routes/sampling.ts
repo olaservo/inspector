@@ -20,36 +20,7 @@ registry.register('openrouter', openRouterStrategy, {
   id: 'openrouter',
   name: 'OpenRouter Strategy',
   requiresConfig: true,
-  configFields: [
-    {
-      name: 'model',
-      type: 'string',
-      label: 'Model Override',
-      placeholder: 'Optional specific model to use',
-      required: false
-    },
-    {
-      name: 'speedPriority',
-      type: 'number',
-      label: 'Speed Priority',
-      placeholder: '0-1 priority for response speed',
-      required: false
-    },
-    {
-      name: 'intelligencePriority',
-      type: 'number',
-      label: 'Intelligence Priority', 
-      placeholder: '0-1 priority for model capability',
-      required: false
-    },
-    {
-      name: 'costPriority',
-      type: 'number',
-      label: 'Cost Priority',
-      placeholder: '0-1 priority for cost efficiency',
-      required: false
-    }
-  ]
+  configFields: []
 });
 
 // Get available sampling strategies

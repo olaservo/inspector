@@ -1,9 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 
+import { ModelConfig } from 'mcp-sampling-service';
+
 interface OpenRouterConfig {
   apiKey: string;
   defaultModel: string;
+  allowedModels?: ModelConfig[];
 }
 
 export interface Config {
