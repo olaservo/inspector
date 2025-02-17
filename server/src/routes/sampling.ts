@@ -1,5 +1,6 @@
 import express from "express/index.js";
 import { SamplingStrategyRegistry, stubStrategy, openRouterStrategy } from "mcp-sampling-service";
+import { getOpenRouterConfig } from "../config.js";
 
 const router = express.Router();
 
@@ -68,7 +69,8 @@ router.post("/", async (req, res) => {
       });
     }
 
-    if (!process.env.OPENROUTER_API_KEY) {
+    const openRouterConfig = getOpenRouterConfig();
+    if (strategy === 'openrouter' && !openRouterConfig.apiKey) {
       return res.status(500).json({
         error: "OpenRouter API key not configured"
       });
@@ -77,8 +79,7 @@ router.post("/", async (req, res) => {
     console.log(`Creating sampling strategy: ${strategy}`);
     const strategyConfig = strategy === 'openrouter' ? {
       ...config,
-      apiKey: process.env.OPENROUTER_API_KEY,
-      defaultModel: process.env.OPENROUTER_DEFAULT_MODEL || 'anthropic/claude-3.5-sonnet'
+      ...openRouterConfig
     } : config;
     
     const samplingStrategy = registry.create(strategy, strategyConfig);

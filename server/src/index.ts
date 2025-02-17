@@ -17,6 +17,7 @@ import express from "express";
 import { findActualExecutable } from "spawn-rx";
 import mcpProxy from "./mcpProxy.js";
 import samplingRoutes from "./routes/sampling.js";
+import configRoutes from "./routes/config.js";
 
 const SSE_HEADERS_PASSTHROUGH = ["authorization"];
 
@@ -199,8 +200,9 @@ app.get("/config", (req, res) => {
   }
 });
 
-// Add sampling routes with JSON parsing middleware
+// Add routes with JSON parsing middleware
 app.use("/api/sampling", express.json(), samplingRoutes);
+app.use("/api/config", configRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
