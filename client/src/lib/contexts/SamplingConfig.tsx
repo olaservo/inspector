@@ -136,10 +136,14 @@ export function SamplingConfigComponent() {
           <div className="space-y-2">
             <label className="block text-sm font-medium">
               Allowed Models
-              <p className="text-sm text-gray-500 mt-1 mb-2">
-                Example format:
-                <pre className="bg-gray-50 p-2 rounded mt-1 text-xs">
-{`[
+              <div className="mt-1 min-h-[12rem]">
+              <p className="text-sm text-gray-500 mt-1">
+                JSON array of models with scores (0-1) for speed, intelligence, and cost
+              </p>
+                <JsonEditor
+                  value={allowedModels}
+                  onChange={setAllowedModels}
+                  placeholder={`[
   {
     "id": "anthropic/claude-3.5-sonnet",
     "speedScore": 0.65,
@@ -147,17 +151,9 @@ export function SamplingConfigComponent() {
     "costScore": 0.70
   }
 ]`}
-                </pre>
-              </p>
-              <div className="mt-1 min-h-[12rem]">
-                <JsonEditor
-                  value={allowedModels}
-                  onChange={setAllowedModels}
                 />
               </div>
-              <p className="text-sm text-gray-500 mt-1">
-                JSON array of models with scores (0-1) for speed, intelligence, and cost
-              </p>
+              
             </label>
           </div>
 
