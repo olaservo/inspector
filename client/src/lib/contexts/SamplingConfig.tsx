@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { SamplingConfig, ModelConfig } from 'mcp-sampling-service';
 import JsonEditor from '../../components/JsonEditor';
 import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
 
 interface OpenRouterConfig {
   defaultModel: string;
@@ -110,12 +111,11 @@ export function SamplingConfigComponent() {
           <div className="space-y-2">
             <label className="block text-sm font-medium">
               API Key
-              <input
+              <Input
                 type="password"
                 value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setApiKey(e.target.value)}
                 placeholder={openRouterConfig?.hasApiKey ? '••••••••••••••••••••••••' : 'Enter API key'}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
               />
             </label>
           </div>
@@ -123,12 +123,11 @@ export function SamplingConfigComponent() {
           <div className="space-y-2">
             <label className="block text-sm font-medium">
               Default Model (Optional)
-              <input
+              <Input
                 type="text"
                 value={defaultModel}
-                onChange={(e) => setDefaultModel(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDefaultModel(e.target.value)}
                 placeholder="anthropic/claude-3.5-sonnet"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
               />
             </label>
           </div>
