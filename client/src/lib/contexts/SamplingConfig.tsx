@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { SamplingConfig, ModelConfig } from 'mcp-sampling-service';
 import JsonEditor from '../../components/JsonEditor';
+import { Button } from '../../components/ui/button';
 
 interface OpenRouterConfig {
   defaultModel: string;
@@ -121,7 +122,7 @@ export function SamplingConfigComponent() {
 
           <div className="space-y-2">
             <label className="block text-sm font-medium">
-              Default Model
+              Default Model (Optional)
               <input
                 type="text"
                 value={defaultModel}
@@ -148,7 +149,7 @@ export function SamplingConfigComponent() {
 ]`}
                 </pre>
               </p>
-              <div className="mt-1 h-64">
+              <div className="mt-1 min-h-[12rem]">
                 <JsonEditor
                   value={allowedModels}
                   onChange={setAllowedModels}
@@ -164,13 +165,12 @@ export function SamplingConfigComponent() {
             <div className="text-red-500 text-sm">{error}</div>
           )}
 
-          <button
+          <Button
             onClick={handleSave}
             disabled={saving}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Save Settings'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
