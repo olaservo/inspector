@@ -135,7 +135,7 @@ export function SamplingConfigComponent() {
 
           <div className="space-y-2">
             <label className="block text-sm font-medium">
-              Allowed Models
+              Allowed Models (Optional)
               <div className="mt-1 min-h-[12rem]">
               <p className="text-sm text-gray-500 mt-1">
                 JSON array of models with scores (0-1) for speed, intelligence, and cost
