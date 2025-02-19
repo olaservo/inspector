@@ -11,7 +11,7 @@ interface OpenRouterConfig {
 }
 
 export function SamplingConfigComponent() {
-  const [strategies, setStrategies] = useState<SamplingConfig | null>(null);
+  const [setStrategies] = useState<SamplingConfig | null>(null);
   const [openRouterConfig, setOpenRouterConfig] = useState<OpenRouterConfig | null>(null);
   const [apiKey, setApiKey] = useState('');
   const [defaultModel, setDefaultModel] = useState('');
