@@ -77,10 +77,10 @@ const App = () => {
     tools: null,
   });
   const [command, setCommand] = useState<string>(() => {
-    return localStorage.getItem("lastCommand") || "mcp-server-everything";
+    return localStorage.getItem("lastCommand") || "npx";
   });
   const [args, setArgs] = useState<string>(() => {
-    return localStorage.getItem("lastArgs") || "";
+    return localStorage.getItem("lastArgs") || "-y @dandeliongold/server-everything@latest";
   });
 
   const [sseUrl, setSseUrl] = useState<string>(() => {
