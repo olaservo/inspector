@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { SamplingConfig, ModelConfig } from 'mcp-sampling-service';
+import { ModelConfig } from 'mcp-sampling-service';
 import JsonEditor from '../../components/JsonEditor';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -11,7 +11,6 @@ interface OpenRouterConfig {
 }
 
 export function SamplingConfigComponent() {
-  const [setStrategies] = useState<SamplingConfig | null>(null);
   const [openRouterConfig, setOpenRouterConfig] = useState<OpenRouterConfig | null>(null);
   const [apiKey, setApiKey] = useState('');
   const [defaultModel, setDefaultModel] = useState('');
@@ -20,12 +19,6 @@ export function SamplingConfigComponent() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch sampling strategies
-    fetch('/api/sampling/strategies')
-      .then(res => res.json())
-      .then(data => setStrategies(data))
-      .catch(error => console.error('Error fetching sampling strategies:', error));
-
     // Fetch OpenRouter config
     fetch('/api/config/openrouter')
       .then(res => res.json())
