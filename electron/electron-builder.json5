@@ -15,7 +15,8 @@
     },
     {
       "from": "dist-electron",
-      "to": "."
+      "to": "dist-electron",
+      "filter": ["*.js", "*.cjs"]
     },
     {
       "from": "../client/dist",
