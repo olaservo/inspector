@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "skipLibCheck": true,
+    "module": "Node16",
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "types": ["node"],
+    "outDir": "dist"
+  },
+  "include": [
+    "vite.config.ts",
+    "package.json"
+  ]
+}

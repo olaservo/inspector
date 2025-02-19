@@ -133,7 +133,38 @@ const SamplingTab = ({ pendingRequests, onApprove, onReject }: Props) => {
   return (
     <TabsContent value="sampling" className="h-96">
       <div className="space-y-4">
-        <SamplingConfigComponent />
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Recent Requests</h3>
+          {pendingRequests.filter(request => !processingRequests.has(request.id)).map((request) => (
+            <div key={request.id} className="p-4 border rounded-lg space-y-4">
+              <pre className="bg-gray-50 p-2 rounded">
+                {JSON.stringify(request.request, null, 2)}
+              </pre>
+              <div className="flex space-x-2">
+                <Button onClick={() => handleApprove(request.id, request.request)}>
+                  Approve
+                </Button>
+              <Button variant="outline" onClick={() => handleReject(request.id)}>
+                  Reject
+                </Button>
+              </div>
+            </div>
+          ))}
+          {pendingRequests.length === 0 && (
+            <p className="text-gray-500">No pending requests</p>
+          )}
+        </div>
+        {error ? (
+          <ErrorDisplay error={error} />
+        ) : (
+          <Alert>
+            <AlertDescription>
+              When the server requests LLM sampling, requests will appear here for approval.
+            </AlertDescription>
+          </Alert>
+        )}
+
+<h3 className="text-lg font-semibold">Sampling Configuration</h3>
         <div className="flex items-end gap-4 p-4 border rounded">
           <div className="space-y-2">
             <Label>Sampling Strategy</Label>
@@ -162,38 +193,7 @@ const SamplingTab = ({ pendingRequests, onApprove, onReject }: Props) => {
             </div>
           ))}
         </div>
-
-        {error ? (
-          <ErrorDisplay error={error} />
-        ) : (
-          <Alert>
-            <AlertDescription>
-              When the server requests LLM sampling, requests will appear here for approval.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Recent Requests</h3>
-          {pendingRequests.filter(request => !processingRequests.has(request.id)).map((request) => (
-            <div key={request.id} className="p-4 border rounded-lg space-y-4">
-              <pre className="bg-gray-50 p-2 rounded">
-                {JSON.stringify(request.request, null, 2)}
-              </pre>
-              <div className="flex space-x-2">
-                <Button onClick={() => handleApprove(request.id, request.request)}>
-                  Approve
-                </Button>
-              <Button variant="outline" onClick={() => handleReject(request.id)}>
-                  Reject
-                </Button>
-              </div>
-            </div>
-          ))}
-          {pendingRequests.length === 0 && (
-            <p className="text-gray-500">No pending requests</p>
-          )}
-        </div>
+        {config.strategy === "openrouter" && <SamplingConfigComponent />}
       </div>
     </TabsContent>
   );

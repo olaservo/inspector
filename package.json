@@ -7,6 +7,7 @@
   "homepage": "https://modelcontextprotocol.io",
   "bugs": "https://github.com/modelcontextprotocol/inspector/issues",
   "type": "module",
+  "main": "dist-electron/main.js",
   "bin": {
     "mcp-inspector": "./bin/cli.js"
   },
@@ -14,19 +15,24 @@
     "bin",
     "client/bin",
     "client/dist",
-    "server/build"
+    "client/dist-electron",
+    "server/build",
+    "dist",
+    "dist-electron"
   ],
   "workspaces": [
     "client",
-    "server"
+    "server",
+    "electron"
   ],
   "scripts": {
-    "dev": "concurrently \"cd client && npm run dev\" \"cd server && npm run dev\"",
-    "build-server": "cd server && npm run build",
-    "build-client": "cd client && npm run build",
-    "build": "npm run build-server && npm run build-client",
-    "start-server": "cd server && npm run start",
-    "start-client": "cd client && npm run preview",
+    "dev": "concurrently -n client,server,electron \"cd client && npm run dev\" \"cd server && npm run dev\" \"cd electron && npm run dev\"",
+    "build": "npm run build:clean && npm run build:all",
+    "build:clean": "rimraf client/dist electron/dist-electron server/dist",
+    "build:all": "npm run build:server && npm run build:client && npm run build:electron",
+    "build:server": "cd server && npm run build",
+    "build:client": "cd client && npm run build",
+    "build:electron": "cd electron && npm run build",
     "start": "node ./bin/cli.js",
     "prepare": "npm run build",
     "prettier-fix": "prettier --write .",
@@ -36,14 +42,15 @@
     "@modelcontextprotocol/inspector-client": "0.3.0",
     "@modelcontextprotocol/inspector-server": "0.3.0",
     "concurrently": "^9.0.1",
+    "mcp-sampling-service": "^0.4.0",
     "shell-quote": "^1.8.2",
     "spawn-rx": "^5.1.0",
-    "ts-node": "^10.9.2",
-    "mcp-sampling-service": "^0.3.0"
+    "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@types/node": "^22.7.5",
     "@types/shell-quote": "^1.7.5",
-    "prettier": "3.3.3"
+    "prettier": "3.3.3",
+    "rimraf": "^6.0.1"
   }
 }

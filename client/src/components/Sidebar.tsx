@@ -304,7 +304,7 @@ const Sidebar = ({
               rel="noopener noreferrer"
             >
               <Button variant="ghost" title="Inspector Documentation">
-                <CircleHelp className="w-4 h-4 text-gray-800" />
+                <CircleHelp className="w-4 h-4" />
               </Button>
             </a>
             <a
@@ -313,7 +313,7 @@ const Sidebar = ({
               rel="noopener noreferrer"
             >
               <Button variant="ghost" title="Debugging Guide">
-                <Bug className="w-4 h-4 text-gray-800" />
+                <Bug className="w-4 h-4" />
               </Button>
             </a>
             <a
@@ -325,7 +325,7 @@ const Sidebar = ({
                 variant="ghost"
                 title="Report bugs or contribute on GitHub"
               >
-                <Github className="w-4 h-4 text-gray-800" />
+                <Github className="w-4 h-4" />
               </Button>
             </a>
           </div>

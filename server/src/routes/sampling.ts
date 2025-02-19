@@ -1,10 +1,27 @@
 import express from "express/index.js";
-import { initializeSamplingService } from "mcp-sampling-service";
+import { SamplingStrategyRegistry, stubStrategy, openRouterStrategy } from "mcp-sampling-service";
+import { getOpenRouterConfig } from "../config.js";
 
 const router = express.Router();
 
-// Initialize sampling service with default strategies
-const registry = initializeSamplingService();
+// Get registry instance and register strategies
+const registry = SamplingStrategyRegistry.getInstance();
+
+// Register stub strategy
+registry.register('stub', stubStrategy, {
+  id: 'stub',
+  name: 'Stub Strategy',
+  configFields: [],
+  requiresConfig: false
+});
+
+// Register OpenRouter strategy
+registry.register('openrouter', openRouterStrategy, {
+  id: 'openrouter',
+  name: 'OpenRouter Strategy',
+  requiresConfig: true,
+  configFields: []
+});
 
 // Get available sampling strategies
 router.get("/strategies", (req, res) => {
@@ -23,8 +40,20 @@ router.post("/", async (req, res) => {
       });
     }
 
+    const openRouterConfig = getOpenRouterConfig();
+    if (strategy === 'openrouter' && !openRouterConfig.apiKey) {
+      return res.status(500).json({
+        error: "OpenRouter API key not configured"
+      });
+    }
+
     console.log(`Creating sampling strategy: ${strategy}`);
-    const samplingStrategy = registry.create(strategy, config);
+    const strategyConfig = strategy === 'openrouter' ? {
+      ...config,
+      ...openRouterConfig
+    } : config;
+    
+    const samplingStrategy = registry.create(strategy, strategyConfig);
 
     console.log("Starting sampling request handling");
     const result = await Promise.race([

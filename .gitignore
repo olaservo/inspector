@@ -4,3 +4,9 @@ server/build
 client/dist
 client/tsconfig.app.tsbuildinfo
 client/tsconfig.node.tsbuildinfo
+dist
+dist-ssr
+*.local
+dist-electron
+release
+server/config.json
