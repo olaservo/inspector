@@ -93,11 +93,7 @@ const DynamicJsonForm = ({
       // Render as JSON editor when max depth is reached
       return (
         <JsonEditor
-          value={JSON.stringify(
-            currentValue ?? generateDefaultValue(propSchema),
-            null,
-            2,
-          )}
+          value={JSON.stringify(currentValue ?? generateDefaultValue(propSchema), null, 2)}
           onChange={(newValue) => {
             try {
               const parsed = JSON.parse(newValue);
@@ -120,10 +116,10 @@ const DynamicJsonForm = ({
             value={(currentValue as string) ?? ""}
             onChange={(e) => {
               const val = e.target.value;
-              if (!val && !propSchema.required) {
+              if (!val) {
                 handleFieldChange(path, undefined);
               } else {
-                handleFieldChange(path, val || null);
+                handleFieldChange(path, val);
               }
             }}
             placeholder={propSchema.description}
@@ -137,11 +133,13 @@ const DynamicJsonForm = ({
             value={(currentValue as number)?.toString() ?? ""}
             onChange={(e) => {
               const val = e.target.value;
-              if (!val && !propSchema.required) {
+              if (!val) {
                 handleFieldChange(path, undefined);
               } else {
                 const num = Number(val);
-                handleFieldChange(path, isNaN(num) ? null : num);
+                if (!isNaN(num)) {
+                  handleFieldChange(path, num);
+                }
               }
             }}
             placeholder={propSchema.description}
@@ -156,11 +154,13 @@ const DynamicJsonForm = ({
             value={(currentValue as number)?.toString() ?? ""}
             onChange={(e) => {
               const val = e.target.value;
-              if (!val && !propSchema.required) {
+              if (!val) {
                 handleFieldChange(path, undefined);
               } else {
-                const num = parseInt(val, 10);
-                handleFieldChange(path, isNaN(num) ? null : num);
+                const num = Number(val);
+                if (!isNaN(num)) {
+                  handleFieldChange(path, num);
+                }
               }
             }}
             placeholder={propSchema.description}
@@ -173,11 +173,7 @@ const DynamicJsonForm = ({
             type="checkbox"
             checked={(currentValue as boolean) ?? false}
             onChange={(e) => {
-              if (!e.target.checked && !propSchema.required) {
-                handleFieldChange(path, undefined);
-              } else {
-                handleFieldChange(path, e.target.checked);
-              }
+              handleFieldChange(path, e.target.checked);
             }}
             className="w-4 h-4"
             required={propSchema.required}
