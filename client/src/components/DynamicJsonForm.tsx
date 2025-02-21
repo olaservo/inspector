@@ -9,12 +9,15 @@ export type JsonValue =
   | number
   | boolean
   | null
+  | undefined
   | JsonValue[]
   | { [key: string]: JsonValue };
 
 export type JsonSchemaType = {
-  type: "string" | "number" | "integer" | "boolean" | "array" | "object";
+  type: "string" | "number" | "integer" | "boolean" | "array" | "object" | "null";
   description?: string;
+  required?: boolean;
+  default?: JsonValue;
   properties?: Record<string, JsonSchemaType>;
   items?: JsonSchemaType;
 };
@@ -44,28 +47,36 @@ const DynamicJsonForm = ({
   const [isJsonMode, setIsJsonMode] = useState(false);
   const [jsonError, setJsonError] = useState<string>();
 
-  const generateDefaultValue = (propSchema: JsonSchemaType): JsonValue => {
+  const generateDefaultValue = (propSchema: JsonSchemaType): JsonValue | undefined => {
+    // Return schema default if provided
+    if ('default' in propSchema) {
+      return propSchema.default;
+    }
+    
+    if (!propSchema.required) {
+      return undefined;
+    }
+
     switch (propSchema.type) {
-      case "string":
-        return "";
+      case "string": return "";
       case "number":
-      case "integer":
-        return 0;
-      case "boolean":
-        return false;
-      case "array":
-        return [];
+      case "integer": return 0;
+      case "boolean": return false;
+      case "array": return [];
       case "object": {
+        if (!propSchema.properties) return {};
         const obj: JsonObject = {};
-        if (propSchema.properties) {
-          Object.entries(propSchema.properties).forEach(([key, prop]) => {
-            obj[key] = generateDefaultValue(prop);
+        Object.entries(propSchema.properties)
+          .filter(([, prop]) => prop.required)
+          .forEach(([key, prop]) => {
+            const value = generateDefaultValue(prop);
+            if (value !== undefined) {
+              obj[key] = value;
+            }
           });
-        }
         return obj;
       }
-      default:
-        return null;
+      default: return undefined;
     }
   };
 
@@ -107,17 +118,34 @@ const DynamicJsonForm = ({
           <Input
             type="text"
             value={(currentValue as string) ?? ""}
-            onChange={(e) => handleFieldChange(path, e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (!val && !propSchema.required) {
+                handleFieldChange(path, undefined);
+              } else {
+                handleFieldChange(path, val || null);
+              }
+            }}
             placeholder={propSchema.description}
+            required={propSchema.required}
           />
         );
       case "number":
         return (
           <Input
             type="number"
-            value={(currentValue as number) ?? ""}
-            onChange={(e) => handleFieldChange(path, Number(e.target.value))}
+            value={(currentValue as number)?.toString() ?? ""}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (!val && !propSchema.required) {
+                handleFieldChange(path, undefined);
+              } else {
+                const num = Number(val);
+                handleFieldChange(path, isNaN(num) ? null : num);
+              }
+            }}
             placeholder={propSchema.description}
+            required={propSchema.required}
           />
         );
       case "integer":
@@ -125,9 +153,18 @@ const DynamicJsonForm = ({
           <Input
             type="number"
             step="1"
-            value={(currentValue as number) ?? ""}
-            onChange={(e) => handleFieldChange(path, parseInt(e.target.value, 10) || 0)}
+            value={(currentValue as number)?.toString() ?? ""}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (!val && !propSchema.required) {
+                handleFieldChange(path, undefined);
+              } else {
+                const num = parseInt(val, 10);
+                handleFieldChange(path, isNaN(num) ? null : num);
+              }
+            }}
             placeholder={propSchema.description}
+            required={propSchema.required}
           />
         );
       case "boolean":
@@ -135,8 +172,15 @@ const DynamicJsonForm = ({
           <Input
             type="checkbox"
             checked={(currentValue as boolean) ?? false}
-            onChange={(e) => handleFieldChange(path, e.target.checked)}
+            onChange={(e) => {
+              if (!e.target.checked && !propSchema.required) {
+                handleFieldChange(path, undefined);
+              } else {
+                handleFieldChange(path, e.target.checked);
+              }
+            }}
             className="w-4 h-4"
+            required={propSchema.required}
           />
         );
       case "object":
@@ -197,10 +241,8 @@ const DynamicJsonForm = ({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  handleFieldChange(path, [
-                    ...arrayValue,
-                    generateDefaultValue(propSchema.items as JsonSchemaType),
-                  ]);
+                  const defaultValue = generateDefaultValue(propSchema.items as JsonSchemaType);
+                  handleFieldChange(path, [...arrayValue, defaultValue ?? null]);
                 }}
                 title={
                   propSchema.items?.description
