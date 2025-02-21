@@ -14,7 +14,14 @@ export type JsonValue =
   | { [key: string]: JsonValue };
 
 export type JsonSchemaType = {
-  type: "string" | "number" | "integer" | "boolean" | "array" | "object" | "null";
+  type:
+    | "string"
+    | "number"
+    | "integer"
+    | "boolean"
+    | "array"
+    | "object"
+    | "null";
   description?: string;
   required?: boolean;
   default?: JsonValue;
@@ -47,22 +54,28 @@ const DynamicJsonForm = ({
   const [isJsonMode, setIsJsonMode] = useState(false);
   const [jsonError, setJsonError] = useState<string>();
 
-  const generateDefaultValue = (propSchema: JsonSchemaType): JsonValue | undefined => {
+  const generateDefaultValue = (
+    propSchema: JsonSchemaType,
+  ): JsonValue | undefined => {
     // Return schema default if provided
-    if ('default' in propSchema) {
+    if ("default" in propSchema) {
       return propSchema.default;
     }
-    
+
     if (!propSchema.required) {
       return undefined;
     }
 
     switch (propSchema.type) {
-      case "string": return "";
+      case "string":
+        return "";
       case "number":
-      case "integer": return 0;
-      case "boolean": return false;
-      case "array": return [];
+      case "integer":
+        return 0;
+      case "boolean":
+        return false;
+      case "array":
+        return [];
       case "object": {
         if (!propSchema.properties) return {};
         const obj: JsonObject = {};
@@ -76,7 +89,8 @@ const DynamicJsonForm = ({
           });
         return obj;
       }
-      default: return undefined;
+      default:
+        return undefined;
     }
   };
 
@@ -93,7 +107,11 @@ const DynamicJsonForm = ({
       // Render as JSON editor when max depth is reached
       return (
         <JsonEditor
-          value={JSON.stringify(currentValue ?? generateDefaultValue(propSchema), null, 2)}
+          value={JSON.stringify(
+            currentValue ?? generateDefaultValue(propSchema),
+            null,
+            2,
+          )}
           onChange={(newValue) => {
             try {
               const parsed = JSON.parse(newValue);
@@ -237,8 +255,13 @@ const DynamicJsonForm = ({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  const defaultValue = generateDefaultValue(propSchema.items as JsonSchemaType);
-                  handleFieldChange(path, [...arrayValue, defaultValue ?? null]);
+                  const defaultValue = generateDefaultValue(
+                    propSchema.items as JsonSchemaType,
+                  );
+                  handleFieldChange(path, [
+                    ...arrayValue,
+                    defaultValue ?? null,
+                  ]);
                 }}
                 title={
                   propSchema.items?.description
