@@ -103,20 +103,30 @@ const DynamicJsonForm = ({
 
     switch (propSchema.type) {
       case "string":
+        return (
+          <Input
+            type="text"
+            value={(currentValue as string) ?? ""}
+            onChange={(e) => handleFieldChange(path, e.target.value)}
+            placeholder={propSchema.description}
+          />
+        );
       case "number":
+        return (
+          <Input
+            type="number"
+            value={(currentValue as number) ?? ""}
+            onChange={(e) => handleFieldChange(path, Number(e.target.value))}
+            placeholder={propSchema.description}
+          />
+        );
       case "integer":
         return (
           <Input
-            type={propSchema.type === "string" ? "text" : "number"}
-            value={(currentValue as string | number) ?? ""}
-            onChange={(e) =>
-              handleFieldChange(
-                path,
-                propSchema.type === "string"
-                  ? e.target.value
-                  : Number(e.target.value),
-              )
-            }
+            type="number"
+            step="1"
+            value={(currentValue as number) ?? ""}
+            onChange={(e) => handleFieldChange(path, parseInt(e.target.value, 10) || 0)}
             placeholder={propSchema.description}
           />
         );
