@@ -149,30 +149,37 @@ const DynamicJsonForm = ({
       case "array": {
         const arrayValue = Array.isArray(currentValue) ? currentValue : [];
         if (!propSchema.items) return null;
+
         return (
           <div className="space-y-4">
             {propSchema.description && (
               <p className="text-sm text-gray-600">{propSchema.description}</p>
             )}
-
-            {propSchema.items?.description && (
-              <p className="text-sm text-gray-500">
-                Items: {propSchema.items.description}
-              </p>
-            )}
-
-            <div className="space-y-2">
+            <div className="space-y-4">
               {arrayValue.map((item, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  {renderFormFields(
-                    propSchema.items as JsonSchemaType,
-                    item,
-                    [...path, index.toString()],
-                    depth + 1,
-                  )}
+                <div key={index} className="relative border rounded-md p-4 pt-8">
+                  <div className="absolute top-2 left-4 text-sm text-gray-500">
+                    Item {index + 1}
+                  </div>
+                  <JsonEditor
+                    value={JSON.stringify(item, null, 2)}
+                    onChange={(newValue) => {
+                      try {
+                        const parsed = JSON.parse(newValue);
+                        const newArray = [...arrayValue];
+                        newArray[index] = parsed;
+                        handleFieldChange(path, newArray);
+                        setJsonError(undefined);
+                      } catch (err) {
+                        setJsonError(err instanceof Error ? err.message : "Invalid JSON");
+                      }
+                    }}
+                    error={jsonError}
+                  />
                   <Button
                     variant="outline"
                     size="sm"
+                    className="absolute top-2 right-2"
                     onClick={() => {
                       const newArray = [...arrayValue];
                       newArray.splice(index, 1);
