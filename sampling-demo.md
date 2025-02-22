@@ -2,6 +2,8 @@
 
 This branch of MCP Inspector includes an example implementation of [Sampling](https://modelcontextprotocol.io/docs/concepts/sampling).
 
+For a short and unofficial presentation explaining more about Sampling in MCP, click [here](https://docs.google.com/presentation/d/e/2PACX-1vTQanxL5HofdsaHx5g-L6VGhSLoGicAK2obcpoinFleKQjpTisMVlvwzxBLv2ZywbZBakxFQvyLi41H/pub?start=false&loop=false&delayms=60000).
+
 ## How it works:
 
 - After the sampling request is approved by the user, the client passes along any information that the selected Sampling Strategy should use to select a model.
