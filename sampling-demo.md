@@ -12,7 +12,7 @@ For a short and unofficial presentation explaining more about Sampling in MCP, c
 
 ## Demo video:
 
-[![Watch a quick demo here](https://img.youtube.com/vi/FK7OcDCm6Lg/0.jpg)](https://www.youtube.com/watch?v=FK7OcDCm6Lg)
+[![Watch a quick demo here](https://img.youtube.com/vi/3u-wP25A-8s/0.jpg)](https://www.youtube.com/watch?v=3u-wP25A-8s)
 
 ## How to run it:
 
