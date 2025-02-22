@@ -109,13 +109,10 @@ const App = () => {
   const nextRequestId = useRef(0);
   const rootsRef = useRef<Root[]>([]);
 
-  const handleApproveSampling = (id: number, result: unknown) => {
+  const handleApproveSampling = (id: number, result: CreateMessageResult) => {
     setPendingSampleRequests((prev) => {
       const request = prev.find((r) => r.id === id);
-      if (request) {
-        const typedResult = result as CreateMessageResult;
-        request.resolve(typedResult);
-      }
+      request?.resolve(result);
       return prev.filter((r) => r.id !== id);
     });
   };
@@ -248,13 +245,9 @@ const App = () => {
           setArgs(data.defaultArgs);
         }
       })
-      .catch((error) => {
-        console.error("Error fetching default environment:", error);
-        setErrors((prev) => ({
-          ...prev,
-          resources: "Error fetching default environment",
-        }));
-      });
+      .catch((error) =>
+        console.error("Error fetching default environment:", error),
+      );
   }, []);
 
   useEffect(() => {
