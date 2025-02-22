@@ -20,7 +20,14 @@ registry.register('openrouter', openRouterStrategy, {
   id: 'openrouter',
   name: 'OpenRouter Strategy',
   requiresConfig: true,
-  configFields: []
+  configFields: [
+    {
+      name: "defaultModel",
+      type: "string",
+      required: true,
+      label: "Default Model"
+    }
+  ]
 });
 
 // Get available sampling strategies
@@ -40,18 +47,30 @@ router.post("/", async (req, res) => {
       });
     }
 
-    const openRouterConfig = getOpenRouterConfig();
-    if (strategy === 'openrouter' && !openRouterConfig.apiKey) {
-      return res.status(500).json({
-        error: "OpenRouter API key not configured"
-      });
-    }
-
     console.log(`Creating sampling strategy: ${strategy}`);
-    const strategyConfig = strategy === 'openrouter' ? {
-      ...config,
-      ...openRouterConfig
-    } : config;
+    let strategyConfig = config;
+
+    // Handle OpenRouter specific configuration
+    if (strategy === 'openrouter') {
+      const openRouterConfig = getOpenRouterConfig();
+      
+      if (!openRouterConfig.apiKey) {
+        return res.status(500).json({
+          error: "OpenRouter API key not configured"
+        });
+      }
+      
+      if (!config.defaultModel) {
+        return res.status(400).json({
+          error: "defaultModel is required for OpenRouter strategy"
+        });
+      }
+
+      strategyConfig = {
+        apiKey: openRouterConfig.apiKey,  // From secure storage
+        ...config  // From request (defaultModel, allowedModels)
+      };
+    }
     
     const samplingStrategy = registry.create(strategy, strategyConfig);
 

@@ -9,13 +9,13 @@ router.get("/openrouter", (req, res) => {
     const config = getOpenRouterConfig();
     // Don't send the actual API key to the client for security
     res.json({
-      defaultModel: config.defaultModel,
       hasApiKey: !!config.apiKey,
-      allowedModels: config.allowedModels
+      isEnvVar: !!process.env.OPENROUTER_API_KEY
     });
   } catch (error) {
+    console.error('Error in GET /openrouter:', error);
     res.status(500).json({
-      error: error instanceof Error ? error.message : "Unknown error occurred"
+      error: "Failed to retrieve OpenRouter configuration. Please check server logs for details."
     });
   }
 });
@@ -23,49 +23,48 @@ router.get("/openrouter", (req, res) => {
 // Update OpenRouter configuration
 router.post("/openrouter", express.json(), (req, res) => {
   try {
-    const { apiKey, defaultModel, allowedModels } = req.body;
+    const { apiKey } = req.body;
     
-    if (apiKey !== undefined && typeof apiKey !== "string") {
-      return res.status(400).json({ error: "API key must be a string" });
+    // Validate request body exists
+    if (!req.body || typeof req.body !== 'object') {
+      return res.status(400).json({ 
+        error: "Invalid request body",
+        details: "Request body must be a JSON object"
+      });
     }
     
-    if (defaultModel !== undefined && typeof defaultModel !== "string") {
-      return res.status(400).json({ error: "Default model must be a string" });
-    }
-
-    if (allowedModels !== undefined) {
-      if (!Array.isArray(allowedModels)) {
-        return res.status(400).json({ error: "Allowed models must be an array" });
+    // Validate API key if provided
+    if (apiKey !== undefined) {
+      if (typeof apiKey !== "string") {
+        return res.status(400).json({ 
+          error: "Invalid API key",
+          details: "API key must be a string"
+        });
       }
-      
-      // Validate each model config
-      for (const model of allowedModels) {
-        if (typeof model !== "object" || model === null) {
-          return res.status(400).json({ error: "Each model config must be an object" });
-        }
-        
-        if (typeof model.id !== "string") {
-          return res.status(400).json({ error: "Model id must be a string" });
-        }
-        
-        for (const score of ["speedScore", "intelligenceScore", "costScore"]) {
-          if (typeof model[score] !== "number" || model[score] < 0 || model[score] > 1) {
-            return res.status(400).json({ error: `Model ${score} must be a number between 0 and 1` });
-          }
-        }
+      if (!apiKey.trim()) {
+        return res.status(400).json({ 
+          error: "Invalid API key",
+          details: "API key cannot be empty"
+        });
       }
     }
 
+    // Update configuration
     updateOpenRouterConfig({
-      ...(apiKey !== undefined && { apiKey }),
-      ...(defaultModel !== undefined && { defaultModel }),
-      ...(allowedModels !== undefined && { allowedModels })
+      ...(apiKey !== undefined && { apiKey })
     });
 
-    res.json({ success: true });
+    const config = getOpenRouterConfig();
+    res.json({ 
+      success: true,
+      message: "OpenRouter configuration updated successfully",
+      isEnvVar: !!process.env.OPENROUTER_API_KEY
+    });
   } catch (error) {
+    console.error('Error in POST /openrouter:', error);
     res.status(500).json({
-      error: error instanceof Error ? error.message : "Unknown error occurred"
+      error: "Failed to update OpenRouter configuration",
+      details: error instanceof Error ? error.message : "Unknown error occurred"
     });
   }
 });

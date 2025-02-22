@@ -2,6 +2,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SamplingConfigComponent } from "../lib/contexts/SamplingConfig";
 import { Button } from "@/components/ui/button";
 import { TabsContent } from "@/components/ui/tabs";
+import { defaultModel, defaultModels } from "../lib/config/defaultModels";
 import {
   Select,
   SelectContent,
@@ -20,7 +21,7 @@ import ErrorDisplay from "./ErrorDisplay";
 
 interface SamplingConfig {
   strategy: string;
-  config: Record<string, string | number | boolean>;
+  config: Record<string, string | number | boolean | Array<any>>;
 }
 
 export type PendingRequest = {
@@ -61,7 +62,10 @@ const SamplingTab = ({ pendingRequests, onApprove, onReject }: Props) => {
     setError(null);
     setConfig({
       strategy: value,
-      config: {}
+      config: value === "openrouter" ? {
+        defaultModel,
+        allowedModels: defaultModels
+      } : {}
     });
     setConfigValues({});
   };
@@ -70,10 +74,22 @@ const SamplingTab = ({ pendingRequests, onApprove, onReject }: Props) => {
     setError(null);
     const newValues = { ...configValues, [field]: value };
     setConfigValues(newValues);
-    setConfig({
+    
+    // Preserve allowedModels when updating other config values
+    const newConfig = {
       ...config,
-      config: newValues
-    });
+      config: {
+        ...config.config,
+        [field]: value
+      }
+    };
+
+    // Ensure allowedModels is preserved for OpenRouter strategy
+    if (config.strategy === 'openrouter' && !newConfig.config.allowedModels) {
+      newConfig.config.allowedModels = defaultModels;
+    }
+
+    setConfig(newConfig);
   };
 
   const [error, setError] = useState<unknown>(null);
