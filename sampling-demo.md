@@ -6,7 +6,7 @@ This branch of MCP Inspector includes an example implementation of [Sampling](ht
 
 - After the sampling request is approved by the user, the client passes along any information that the selected Sampling Strategy should use to select a model.
 - For the OpenRouter Strategy example, this includes which models are allowed, as well as each model's relative scores for intelligence, speed, and cost.
-- The Sampling Strategy (as defined by a proof-of-concept library called `mcp-sampling-service`) decides how the model is selected when sampling from an LLM.
+- The Sampling Strategy (as defined by a proof-of-concept library called [mcp-sampling-service](https://github.com/olaservo/mcp-sampling-service)) decides how the model is selected when sampling from an LLM.
 
 ## Demo video:
 
@@ -14,7 +14,7 @@ This branch of MCP Inspector includes an example implementation of [Sampling](ht
 
 ## How to run it:
 
-This demo requires an OpenRouter API Key.  OpenRouter was used for this example because it provides a wide range of models from multiple providers.
+This demo requires an [OpenRouter](https://openrouter.ai/) API Key.  OpenRouter was used for this example because it provides a wide range of models from multiple providers.
 
 1. Clone this repo and switch to this branch
 2. Follow the instructions from the main [README.md](README.md) to set up your dev environment.
