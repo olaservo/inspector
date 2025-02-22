@@ -18,7 +18,7 @@ This demo requires an [OpenRouter](https://openrouter.ai/) API Key.  OpenRouter 
 
 1. Clone this repo and switch to this branch
 2. Follow the instructions from the main [README.md](README.md) to set up your dev environment.
-3. When you run your dev environment, you need to pass your OPENROUTER_API_KEY to the app.  For example, you can run `$env:OPENROUTER_API_KEY="<your-api-key>"; npm run dev:windows` if you are on Windows.  The recommended approach to run the demo is to use an environment variable for your API Key, although there is also a config file option that you can set in the UI once the app is running.
+3. When you run your dev environment, you need to pass your `OPENROUTER_API_KEY` to the app.  For example, you can run `$env:OPENROUTER_API_KEY="<your-api-key>"; npm run dev:windows` if you are on Windows.  The recommended approach to run the demo is to use an environment variable for your API Key, although there is also a config file option that you can set in the UI once the app is running.
 4. Once the MCP Inspector app is running, make sure you connect to either the server `@dandeliongold/server-everything` or another server that allows you to test making a sampling request.  The next steps assume you are using this server which includes an enhanced version of the `sampleLLM` tool.
 5. Go to the **Sampling** tab and select the **OpenRouter Strategy**. If your API key is configured correctly, then the UI should show a message about using the environment variable.
 6. Go to the **Tools** tab and click the **List Tools** button, then click the `sampleLLM` tool.
