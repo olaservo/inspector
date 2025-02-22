@@ -16,6 +16,8 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import express from "express";
 import { findActualExecutable } from "spawn-rx";
 import mcpProxy from "./mcpProxy.js";
+import samplingRoutes from "./routes/sampling.js";
+import configRoutes from "./routes/config.js";
 
 const SSE_HEADERS_PASSTHROUGH = ["authorization"];
 
@@ -27,13 +29,29 @@ const defaultEnvironment = {
 const { values } = parseArgs({
   args: process.argv.slice(2),
   options: {
+    port: {
+      type: "string",
+    },
+    "stdio-server": {
+      type: "string",
+    },
+    "sse-server": {
+      type: "string",
+    },
     env: { type: "string", default: "" },
     args: { type: "string", default: "" },
   },
 });
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:5173', 
+    'http://127.0.0.1:5173',
+  ],
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type']
+}));
 
 let webAppTransports: SSEServerTransport[] = [];
 
@@ -180,6 +198,10 @@ app.get("/config", (req, res) => {
   }
 });
 
+// Add routes with JSON parsing middleware
+app.use("/api/sampling", express.json(), samplingRoutes);
+app.use("/api/config", configRoutes);
+
 const PORT = process.env.PORT || 3000;
 
 try {
@@ -189,7 +211,7 @@ try {
     const addr = server.address();
     const port = typeof addr === "string" ? addr : addr?.port;
     console.log(`Proxy server listening on port ${port}`);
-  });
+});
 } catch (error) {
   console.error("Failed to start server:", error);
   process.exit(1);

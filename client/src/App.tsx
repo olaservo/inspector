@@ -77,10 +77,10 @@ const App = () => {
     tools: null,
   });
   const [command, setCommand] = useState<string>(() => {
-    return localStorage.getItem("lastCommand") || "mcp-server-everything";
+    return localStorage.getItem("lastCommand") || "npx";
   });
   const [args, setArgs] = useState<string>(() => {
-    return localStorage.getItem("lastArgs") || "";
+    return localStorage.getItem("lastArgs") || "-y @dandeliongold/server-everything@latest";
   });
 
   const [sseUrl, setSseUrl] = useState<string>(() => {
@@ -109,10 +109,13 @@ const App = () => {
   const nextRequestId = useRef(0);
   const rootsRef = useRef<Root[]>([]);
 
-  const handleApproveSampling = (id: number, result: CreateMessageResult) => {
+  const handleApproveSampling = (id: number, result: unknown) => {
     setPendingSampleRequests((prev) => {
       const request = prev.find((r) => r.id === id);
-      request?.resolve(result);
+      if (request) {
+        const typedResult = result as CreateMessageResult;
+        request.resolve(typedResult);
+      }
       return prev.filter((r) => r.id !== id);
     });
   };
@@ -245,9 +248,13 @@ const App = () => {
           setArgs(data.defaultArgs);
         }
       })
-      .catch((error) =>
-        console.error("Error fetching default environment:", error),
-      );
+      .catch((error) => {
+        console.error("Error fetching default environment:", error);
+        setErrors((prev) => ({
+          ...prev,
+          resources: "Error fetching default environment",
+        }));
+      });
   }, []);
 
   useEffect(() => {
