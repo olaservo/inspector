@@ -50,6 +50,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.11.1",
+    "@modelcontextprotocol/server-everything": "^2025.3.19",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@types/jest": "^29.5.14",

@@ -33,7 +33,7 @@ const params = new URLSearchParams(window.location.search);
 const DEFAULT_REQUEST_TIMEOUT_MSEC =
   parseInt(params.get("timeout") ?? "") || 10000;
 
-interface UseConnectionOptions {
+export interface UseConnectionOptions {
   transportType: "stdio" | "sse";
   command: string;
   args: string;
@@ -315,6 +315,13 @@ export function useConnection({
     }
   };
 
+  const subscribe = async (uri: string) => {
+    if (!mcpClient) {
+      throw new Error("MCP client not connected");
+    }
+    return mcpClient.subscribe(uri);
+  };
+
   return {
     connectionStatus,
     serverCapabilities,
@@ -325,5 +332,6 @@ export function useConnection({
     handleCompletion,
     completionsSupported,
     connect,
+    subscribe,
   };
 }
