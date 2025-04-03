@@ -222,7 +222,7 @@ const App = () => {
       // Connect to the server
       connectMcpServer();
     }
-  }, [connectMcpServer, toast]);
+  }, [toast]);
 
   useEffect(() => {
     fetch(`${getMCPProxyAddress(config)}/config`)
