@@ -17,7 +17,13 @@ import {
   Tool,
   LoggingLevel,
 } from "@modelcontextprotocol/sdk/types.js";
-import React, { Suspense, useEffect, useRef, useState } from "react";
+import React, {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useConnection } from "./lib/hooks/useConnection";
 import { useDraggablePane } from "./lib/hooks/useDraggablePane";
 import { StdErrNotification } from "./lib/notificationTypes";
@@ -45,15 +51,78 @@ import Sidebar from "./components/Sidebar";
 import ToolsTab from "./components/ToolsTab";
 import { DEFAULT_INSPECTOR_CONFIG } from "./lib/constants";
 import { InspectorConfig } from "./lib/configurationTypes";
-import { getMCPProxyAddress } from "./utils/configUtils";
-import { useToast } from "@/hooks/use-toast";
+import {
+  getMCPProxyAddress,
+  getMCPServerRequestTimeout,
+} from "./utils/configUtils";
+>>>>>>> 3f9500f (feat: QoL improvements for OAuth Callback)
+import {
+  ClientRequest,
+  CompatibilityCallToolResult,
+  CompatibilityCallToolResultSchema,
+  CreateMessageResult,
+  EmptyResultSchema,
+  GetPromptResultSchema,
+  ListPromptsResultSchema,
+  ListResourcesResultSchema,
+  ListResourceTemplatesResultSchema,
+  ListToolsResultSchema,
+  ReadResourceResultSchema,
+  Resource,
+  ResourceTemplate,
+  Root,
+  ServerNotification,
+  Tool,
+  LoggingLevel,
+} from "@modelcontextprotocol/sdk/types.js";
+import React, {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { useConnection } from "./lib/hooks/useConnection";
+import { useDraggablePane } from "./lib/hooks/useDraggablePane";
+import { StdErrNotification } from "./lib/notificationTypes";
 
-const params = new URLSearchParams(window.location.search);
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Bell,
+  Files,
+  FolderTree,
+  Hammer,
+  Hash,
+  MessageSquare,
+} from "lucide-react";
+
+import { z } from "zod";
+import "./App.css";
+import ConsoleTab from "./components/ConsoleTab";
+import HistoryAndNotifications from "./components/History";
+import PingTab from "./components/PingTab";
+import PromptsTab, { Prompt } from "./components/PromptsTab";
+import ResourcesTab from "./components/ResourcesTab";
+import RootsTab from "./components/RootsTab";
+import SamplingTab, { PendingRequest } from "./components/SamplingTab";
+import Sidebar from "./components/Sidebar";
+import ToolsTab from "./components/ToolsTab";
+import { DEFAULT_INSPECTOR_CONFIG } from "./lib/constants";
+import { InspectorConfig } from "./lib/configurationTypes";
+import {
+  getMCPProxyAddress,
+  getMCPServerRequestTimeout,
+} from "./utils/configUtils";
+=======
+import {
+  getMCPProxyAddress,
+  getMCPServerRequestTimeout,
+} from "./utils/configUtils";
+>>>>>>> 3f9500f (feat: QoL improvements for OAuth Callback)
+
 const CONFIG_LOCAL_STORAGE_KEY = "inspectorConfig_v1";
 
 const App = () => {
-  const { toast } = useToast();
-  // Handle OAuth callback route
   const [resources, setResources] = useState<Resource[]>([]);
   const [resourceTemplates, setResourceTemplates] = useState<
     ResourceTemplate[]
@@ -212,31 +281,15 @@ const App = () => {
     localStorage.setItem(CONFIG_LOCAL_STORAGE_KEY, JSON.stringify(config));
   }, [config]);
 
-  const hasProcessedRef = useRef(false);
-  // Auto-connect if serverUrl is provided in URL params (e.g. after OAuth callback)
-  useEffect(() => {
-    if (hasProcessedRef.current) {
-      // Only try to connect once
-      return;
-    }
-    const serverUrl = params.get("serverUrl");
-    if (serverUrl) {
+  // Auto-connect to previously saved serverURL after OAuth callback
+  const onOAuthConnect = useCallback(
+    (serverUrl: string) => {
       setSseUrl(serverUrl);
       setTransportType("sse");
-      // Remove serverUrl from URL without reloading the page
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete("serverUrl");
-      window.history.replaceState({}, "", newUrl.toString());
-      // Show success toast for OAuth
-      toast({
-        title: "Success",
-        description: "Successfully authenticated with OAuth",
-      });
-      hasProcessedRef.current = true;
-      // Connect to the server
-      connectMcpServer();
-    }
-  }, [connectMcpServer, toast]);
+      void connectMcpServer();
+    },
+    [connectMcpServer],
+  );
 
   useEffect(() => {
     fetch(`${getMCPProxyAddress(config)}/config`)
@@ -473,7 +526,7 @@ const App = () => {
     );
     return (
       <Suspense fallback={<div>Loading...</div>}>
-        <OAuthCallback />
+        <OAuthCallback onConnect={onOAuthConnect} />
       </Suspense>
     );
   }
