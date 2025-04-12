@@ -3,12 +3,17 @@ import { describe, it, expect, jest, beforeAll, beforeEach, afterAll } from "@je
 import "@testing-library/jest-dom";
 import OAuthCallback from "../OAuthCallback";
 import { SESSION_KEYS } from "../../lib/constants";
-import { createTestServer, setupOAuthTest, TestServer } from "./test-utils";
+import { createProxyTestServer, ProxyTestServer } from "./proxy-test-utils";
+import { AuthResult } from "@modelcontextprotocol/sdk/client/auth.js";
 
 // Mock auth module
-jest.mock("@modelcontextprotocol/sdk/client/auth.js", () => ({
-  auth: jest.fn().mockResolvedValue("AUTHORIZED")
-}));
+jest.mock("@modelcontextprotocol/sdk/client/auth.js", () => {
+  const mockAuth = jest.fn<() => Promise<AuthResult>>().mockResolvedValue("AUTHORIZED");
+  return { auth: mockAuth };
+});
+
+// Export mock for use in tests
+export const mockAuth = jest.fn<() => Promise<AuthResult>>().mockResolvedValue("AUTHORIZED");
 
 // Mock toast for UI feedback
 const mockToast = jest.fn();
@@ -18,30 +23,28 @@ jest.mock("@/hooks/use-toast.ts", () => ({
 
 describe("OAuth Callback Integration", () => {
   const TEST_PORT = 3000;
-  let testServer: TestServer;
-  let cleanup: () => void;
+  let proxyServer: ProxyTestServer;
 
   beforeAll(async () => {
-    const { testProvider, cleanup: providerCleanup } = setupOAuthTest();
-    testServer = await createTestServer(TEST_PORT, testProvider);
-    cleanup = providerCleanup;
+    proxyServer = await createProxyTestServer(TEST_PORT);
   });
 
   beforeEach(() => {
-    cleanup();
-    window.sessionStorage.setItem(SESSION_KEYS.SERVER_URL, testServer.url);
+    window.sessionStorage.clear();
+    window.sessionStorage.setItem(SESSION_KEYS.SERVER_URL, proxyServer.proxyUrl);
     mockToast.mockClear();
+    proxyServer.resetCounters();
   });
 
   afterAll(async () => {
-    await testServer.cleanup();
+    await proxyServer.cleanup();
   });
 
   it("completes full OAuth flow", async () => {
     const mockOnConnect = jest.fn();
     
     // Set up successful OAuth callback URL
-    const callbackUrl = new URL(`${testServer.url}/oauth/callback`);
+    const callbackUrl = new URL(`${proxyServer.proxyUrl}/oauth/callback`);
     callbackUrl.searchParams.set("code", "test-auth-code");
     Object.defineProperty(window, "location", {
       value: callbackUrl,
@@ -51,6 +54,9 @@ describe("OAuth Callback Integration", () => {
     await act(async () => {
       render(<OAuthCallback onConnect={mockOnConnect} />);
     });
+
+    // Wait for connection
+    await proxyServer.waitForConnection();
 
     // Verify loading state
     expect(screen.getByText("Processing OAuth callback...")).toBeInTheDocument();
@@ -63,14 +69,15 @@ describe("OAuth Callback Integration", () => {
     });
 
     // Verify onConnect callback
-    expect(mockOnConnect).toHaveBeenCalledWith(testServer.url);
+    expect(mockOnConnect).toHaveBeenCalledWith(proxyServer.proxyUrl);
+    expect(proxyServer.getTokenExchangeCount()).toBe(1);
   });
 
   it("handles authorization errors", async () => {
     const mockOnConnect = jest.fn();
     
     // Set up error OAuth callback URL
-    const errorUrl = new URL(`${testServer.url}/oauth/callback`);
+    const errorUrl = new URL(`${proxyServer.proxyUrl}/oauth/callback`);
     errorUrl.searchParams.set("error", "access_denied");
     errorUrl.searchParams.set("error_description", "User denied access");
     Object.defineProperty(window, "location", {
@@ -89,7 +96,9 @@ describe("OAuth Callback Integration", () => {
       variant: "destructive",
     });
 
-    // Verify callback not called
+    // Verify no connection or token exchange
+    expect(proxyServer.getConnectionCount()).toBe(0);
+    expect(proxyServer.getTokenExchangeCount()).toBe(0);
     expect(mockOnConnect).not.toHaveBeenCalled();
   });
 
@@ -100,7 +109,7 @@ describe("OAuth Callback Integration", () => {
     window.sessionStorage.clear();
 
     // Set up a valid callback URL (but missing server URL in session)
-    const callbackUrl = new URL(`${testServer.url}/oauth/callback`);
+    const callbackUrl = new URL(`${proxyServer.proxyUrl}/oauth/callback`);
     callbackUrl.searchParams.set("code", "test-auth-code");
     Object.defineProperty(window, "location", {
       value: callbackUrl,
@@ -118,7 +127,39 @@ describe("OAuth Callback Integration", () => {
       variant: "destructive",
     });
 
-    // Verify callback not called
+    // Verify no connection or token exchange
+    expect(proxyServer.getConnectionCount()).toBe(0);
+    expect(proxyServer.getTokenExchangeCount()).toBe(0);
+    expect(mockOnConnect).not.toHaveBeenCalled();
+  });
+
+  it("handles proxy token exchange errors", async () => {
+    const mockOnConnect = jest.fn();
+    
+    // Mock auth module to simulate token exchange error
+    mockAuth.mockRejectedValueOnce(new Error("Token exchange failed"));
+    
+    // Set up callback URL
+    const callbackUrl = new URL(`${proxyServer.proxyUrl}/oauth/callback`);
+    callbackUrl.searchParams.set("code", "invalid-code");
+    Object.defineProperty(window, "location", {
+      value: callbackUrl,
+      writable: true,
+    });
+
+    await act(async () => {
+      render(<OAuthCallback onConnect={mockOnConnect} />);
+    });
+
+    // Verify error toast
+    expect(mockToast).toHaveBeenCalledWith({
+      title: "OAuth Authorization Error",
+      description: expect.stringContaining("Token exchange failed"),
+      variant: "destructive",
+    });
+
+    // Verify no connection established
+    expect(proxyServer.getConnectionCount()).toBe(0);
     expect(mockOnConnect).not.toHaveBeenCalled();
   });
 });
