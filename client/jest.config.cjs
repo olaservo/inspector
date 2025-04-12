@@ -4,6 +4,7 @@ module.exports = {
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
     "\\.css$": "<rootDir>/src/__mocks__/styleMock.js",
+    "^(\\.{1,2}/.*)\\.js$": "$1"
   },
   transform: {
     "^.+\\.tsx?$": [
@@ -14,6 +15,9 @@ module.exports = {
       },
     ],
   },
+  transformIgnorePatterns: [
+    "/node_modules/(?!(@modelcontextprotocol|pkce-challenge)/)"
+  ],
   extensionsToTreatAsEsm: [".ts", ".tsx"],
   testRegex: "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
   // Exclude directories and files that don't need to be tested
