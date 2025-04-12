@@ -78,7 +78,7 @@ export async function createProxyTestServer(port: number): Promise<ProxyTestServ
   });
 
   // Track token exchanges
-  app.post("/oauth/token", (req, res, next) => {
+  app.post("/oauth/token", (_req, _res, next) => {
     tokenExchangeCount++;
     next();
   });
