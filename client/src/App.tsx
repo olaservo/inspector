@@ -52,8 +52,7 @@ import ToolsTab from "./components/ToolsTab";
 import { DEFAULT_INSPECTOR_CONFIG } from "./lib/constants";
 import { InspectorConfig } from "./lib/configurationTypes";
 import {
-  getMCPProxyAddress,
-  getMCPServerRequestTimeout,
+  getMCPProxyAddress
 } from "./utils/configUtils";
 
 const CONFIG_LOCAL_STORAGE_KEY = "inspectorConfig_v1";
