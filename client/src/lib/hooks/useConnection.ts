@@ -298,7 +298,11 @@ export function useConnection({
 
       const clientTransport = new SSEClientTransport(mcpProxyServerUrl, {
         eventSourceInit: {
-          fetch: (url, init) => fetch(url, { ...init, headers }),
+          fetch: (url, init) => {
+            console.log('[Connection] Making SSE request to:', url.toString());
+            console.log('[Connection] With headers:', init?.headers);
+            return fetch(url, { ...init, headers });
+          }
         },
         requestInit: {
           headers,
@@ -333,8 +337,11 @@ export function useConnection({
       }
 
       try {
+        console.log('[Connection] Attempting to connect with transport...');
         await client.connect(clientTransport);
+        console.log('[Connection] Successfully connected');
       } catch (error) {
+        console.log('[Connection] Connection failed:', error);
         console.error(
           `Failed to connect to MCP Server via the MCP Inspector Proxy: ${mcpProxyServerUrl}:`,
           error,
@@ -371,6 +378,7 @@ export function useConnection({
 
       setMcpClient(client);
       setConnectionStatus("connected");
+      console.log('[Connection] Connection status set to: connected');
     } catch (e) {
       console.error(e);
       setConnectionStatus("error");
