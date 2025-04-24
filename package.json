@@ -33,7 +33,9 @@
     "prepare": "npm run build",
     "prettier-fix": "prettier --write .",
     "prettier-check": "prettier --check .",
-    "publish-all": "npm publish --workspaces --access public && npm publish --access public"
+    "publish-all": "npm publish --workspaces --access public && npm publish --access public",
+    "test:e2e:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:6274 && cd client && npm run test:e2e\" --kill-others --success first",
+    "test:e2e:dev:windows": "concurrently \"npm run dev:windows\" \"wait-on http://localhost:6274 && cd client && npm run test:e2e\" --kill-others --success first"
   },
   "dependencies": {
     "@modelcontextprotocol/inspector-client": "^0.8.2",
