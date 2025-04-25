@@ -21,6 +21,7 @@
     "server"
   ],
   "scripts": {
+    "clean": "rimraf ./node_modules ./client/node_modules ./server/node_modules ./dist ./client/dist ./server/dist && npm install",
     "dev": "concurrently \"cd client && npm run dev\" \"cd server && npm run dev\"",
     "dev:windows": "concurrently \"cd client && npm run dev\" \"cd server && npm run dev:windows",
     "test": "npm run prettier-check && cd client && npm test",
@@ -49,6 +50,7 @@
     "@types/jest": "^29.5.14",
     "@types/node": "^22.7.5",
     "@types/shell-quote": "^1.7.5",
-    "prettier": "3.3.3"
+    "prettier": "3.3.3",
+    "rimraf": "^6.0.1"
   }
 }
