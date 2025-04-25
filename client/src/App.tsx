@@ -51,9 +51,7 @@ import Sidebar from "./components/Sidebar";
 import ToolsTab from "./components/ToolsTab";
 import { DEFAULT_INSPECTOR_CONFIG } from "./lib/constants";
 import { InspectorConfig } from "./lib/configurationTypes";
-import {
-  getMCPProxyAddress
-} from "./utils/configUtils";
+import { getMCPProxyAddress } from "./utils/configUtils";
 
 const CONFIG_LOCAL_STORAGE_KEY = "inspectorConfig_v1";
 
@@ -83,9 +81,14 @@ const App = () => {
   const [sseUrl, setSseUrl] = useState<string>(() => {
     return localStorage.getItem("lastSseUrl") || "http://localhost:3001/sse";
   });
-  const [transportType, setTransportType] = useState<"stdio" | "sse">(() => {
+  const [transportType, setTransportType] = useState<
+    "stdio" | "sse" | "streamable-http"
+  >(() => {
     return (
-      (localStorage.getItem("lastTransportType") as "stdio" | "sse") || "stdio"
+      (localStorage.getItem("lastTransportType") as
+        | "stdio"
+        | "sse"
+        | "streamable-http") || "stdio"
     );
   });
   const [logLevel, setLogLevel] = useState<LoggingLevel>("debug");
@@ -119,6 +122,10 @@ const App = () => {
   });
   const [bearerToken, setBearerToken] = useState<string>(() => {
     return localStorage.getItem("lastBearerToken") || "";
+  });
+
+  const [headerName, setHeaderName] = useState<string>(() => {
+    return localStorage.getItem("lastHeaderName") || "";
   });
 
   const [pendingSampleRequests, setPendingSampleRequests] = useState<
@@ -173,6 +180,7 @@ const App = () => {
     sseUrl,
     env,
     bearerToken,
+    headerName,
     config,
     onNotification: (notification) => {
       setNotifications((prev) => [...prev, notification as ServerNotification]);
@@ -211,6 +219,10 @@ const App = () => {
   useEffect(() => {
     localStorage.setItem("lastBearerToken", bearerToken);
   }, [bearerToken]);
+
+  useEffect(() => {
+    localStorage.setItem("lastHeaderName", headerName);
+  }, [headerName]);
 
   useEffect(() => {
     localStorage.setItem(CONFIG_LOCAL_STORAGE_KEY, JSON.stringify(config));
@@ -455,6 +467,10 @@ const App = () => {
     setLogLevel(level);
   };
 
+  const clearStdErrNotifications = () => {
+    setStdErrNotifications([]);
+  };
+
   if (window.location.pathname === "/oauth/callback") {
     const OAuthCallback = React.lazy(
       () => import("./components/OAuthCallback"),
@@ -484,12 +500,15 @@ const App = () => {
         setConfig={setConfig}
         bearerToken={bearerToken}
         setBearerToken={setBearerToken}
+        headerName={headerName}
+        setHeaderName={setHeaderName}
         onConnect={connectMcpServer}
         onDisconnect={disconnectMcpServer}
         stdErrNotifications={stdErrNotifications}
         logLevel={logLevel}
         sendLogLevelRequest={sendLogLevelRequest}
         loggingSupported={!!serverCapabilities?.logging || false}
+        clearStdErrNotifications={clearStdErrNotifications}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 overflow-auto">
