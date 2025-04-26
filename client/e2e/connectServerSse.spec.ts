@@ -2,12 +2,11 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Connect MCP Server Using SSE In Inspector UI', () => {
 
-  test('should connect to test server using SSE and verify PING tool', async ({ page }) => {
+test('should connect to test server using SSE and verify echo tool', async ({ page }) => {
     // Load the inspector UI
     await page.goto('/');
 
     // Set server URL and transport type in localStorage
-    // TODO: add test for setting in UI too
     await page.evaluate(() => {
       localStorage.setItem('lastSseUrl', 'http://localhost:3001/sse');
       localStorage.setItem('lastTransportType', 'sse');
@@ -20,29 +19,40 @@ test.describe('Connect MCP Server Using SSE In Inspector UI', () => {
       consoleMessages.push(msg.text());
     });
 
-    // Click connect and verify initial disconnected state  
-    const connectButton = await page.waitForSelector('[data-testid="connect-button"]');
+    // Wait for and click connect button
+    const connectButton = await page.waitForSelector('[data-testid="connect-button"]', { state: 'visible' });
     await connectButton.click();
 
-    // Wait for connection status to show connected
-    await expect(page.getByText('Connected')).toBeVisible();
+    // Wait for connection status to show connected and verify
+    const connectedText = page.getByText('Connected');
+    await expect(connectedText).toBeVisible({ timeout: 10000 });
 
-    // Navigate to Tools tab
-    await page.getByRole('tab', { name: 'Tools' }).click();
+    // Navigate to Tools tab and wait for it to be active
+    const toolsTab = page.getByRole('tab', { name: 'Tools' });
+    await toolsTab.click();
+    await expect(toolsTab).toHaveAttribute('aria-selected', 'true');
 
-    // Wait for the echo tool to appear and select it
-    await page.getByText('echo', { exact: true }).click();
+    // Click the List Tools button to load available tools
+    const listToolsButton = page.getByRole('button', { name: 'List Tools' });
+    await expect(listToolsButton).toBeVisible();
+    await listToolsButton.click();
 
-    // Enter a test message
-    await page.getByLabel('message').fill('Hello MCP!');
+    // Wait for tools list to be loaded and verify echo tool exists
+    const echoTool = page.getByText('echo', { exact: true });
+    await expect(echoTool).toBeVisible({ timeout: 5000 });
+    await echoTool.click();
 
-    // Call the tool
-    await page.getByRole('button', { name: 'Call Tool' }).click();
+    // Wait for message input to be available
+    const messageInput = page.getByLabel('message');
+    await expect(messageInput).toBeVisible();
+    await messageInput.fill('Hello MCP!');
 
-    // Verify the response
-    await expect(page.getByText('Echo: Hello MCP!')).toBeVisible();
+    // Call the tool and wait for response
+    const callButton = page.getByRole('button', { name: 'Run Tool' });
+    await expect(callButton).toBeEnabled();
+    await callButton.click();
 
-    // TODO Verify console messages
-    //expect(consoleMessages).toContainEqual(expect.stringContaining('401 (Unauthorized)'));
+    // Verify the response with increased timeout
+    await expect(page.getByText('Echo: Hello MCP!')).toBeVisible({ timeout: 10000 });
   });
 });
