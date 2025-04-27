@@ -21,9 +21,10 @@
     "preview": "vite preview --port 6274",
     "test": "jest --config jest.config.cjs",
     "test:watch": "jest --config jest.config.cjs --watch",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:debug": "playwright test --debug",
+    "start:test-server": "cd ../node_modules/@modelcontextprotocol/server-everything && npm run start:sse",
+    "test:e2e": "concurrently \"npm run start:test-server\" \"playwright test\"",
+    "test:e2e:ui": "concurrently \"npm run start:test-server\" \"playwright test --ui\"",
+    "test:e2e:debug": "concurrently \"npm run start:test-server\" \"playwright test --debug\"",
     "install:browsers": "playwright install chromium"
   },
   "dependencies": {
@@ -53,6 +54,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@modelcontextprotocol/server-everything": "2025.4.25",
     "@eslint/js": "^9.11.1",
     "@playwright/test": "^1.51.1",
     "@testing-library/jest-dom": "^6.6.3",
