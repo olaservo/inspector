@@ -22,7 +22,7 @@
     "cli"
   ],
   "scripts": {
-    "clean": "rimraf ./node_modules ./client/node_modules ./server/node_modules ./dist ./client/dist ./server/dist && npm install",
+    "clean": "rimraf ./node_modules ./client/node_modules ./server/node_modules ./dist ./client/dist ./server/dist ./package-lock.json && npm install",
     "dev": "concurrently \"cd client && npm run dev\" \"cd server && npm run dev\"",
     "dev:windows": "concurrently \"cd client && npm run dev\" \"cd server && npm run dev:windows",
     "build": "npm run build-server && npm run build-client && npm run build-cli",
