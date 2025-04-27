@@ -14,6 +14,7 @@ test('should connect to test server using SSE and verify echo tool', async ({ pa
     await page.reload();
 
     // Collect all console messages
+    // TODO: History entries are more well-structured/predictable and useful here than raw console output
     const consoleMessages: string[] = [];
     page.on('console', msg => {
       consoleMessages.push(msg.text());
