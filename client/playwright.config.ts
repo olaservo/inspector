@@ -17,8 +17,20 @@ export default defineConfig({
   },
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'sse',
+      testDir: './e2e/sse',
+      testMatch: '**/*.spec.ts',
+      use: { 
+        ...devices['Desktop Chrome'],
+      },
+    },
+    {
+      name: 'stdio',
+      testDir: './e2e/stdio',
+      testMatch: '**/*.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+      },
     },
   ],
   webServer: {
