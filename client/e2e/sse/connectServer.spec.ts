@@ -13,13 +13,6 @@ test('should connect to test server using SSE and verify echo tool', async ({ pa
     });
     await page.reload();
 
-    // Collect all console messages
-    // TODO: History entries are more well-structured/predictable and useful here than raw console output
-    const consoleMessages: string[] = [];
-    page.on('console', msg => {
-      consoleMessages.push(msg.text());
-    });
-
     // Wait for and click connect button
     const connectButton = await page.waitForSelector('[data-testid="connect-button"]', { state: 'visible' });
     await connectButton.click();
@@ -27,6 +20,20 @@ test('should connect to test server using SSE and verify echo tool', async ({ pa
     // Wait for connection status to show connected and verify
     const connectedText = page.getByText('Connected');
     await expect(connectedText).toBeVisible({ timeout: 10000 });
+
+    // Find and expand the initialize entry in History
+    const initializeEntry = page.getByText('1. initialize');
+    await expect(initializeEntry).toBeVisible();
+    await initializeEntry.click();
+
+    // Verify server info content in initialize response from History pane
+    const jsonView = page.getByTestId('history-entry-0-response')
+      .locator('.font-mono');
+    await expect(jsonView).toBeVisible();
+    await expect(jsonView).toContainText('capabilities');
+    await expect(jsonView).toContainText('serverInfo');
+    await expect(jsonView).toContainText('example-servers/everything');
+    await expect(jsonView).toContainText('version');
 
     // Navigate to Tools tab and wait for it to be active
     const toolsTab = page.getByRole('tab', { name: 'Tools' });

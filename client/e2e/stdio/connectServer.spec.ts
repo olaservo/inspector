@@ -12,13 +12,6 @@ test.describe('Connect MCP Server Using stdio In Inspector UI', () => {
     });
     await page.reload();
 
-    // Collect all console messages
-    // TODO: History entries are more well-structured/predictable and useful here than raw console output
-    const consoleMessages: string[] = [];
-    page.on('console', msg => {
-      consoleMessages.push(msg.text());
-    });
-
     // Wait for and click connect button
     const connectButton = await page.waitForSelector('[data-testid="connect-button"]', { state: 'visible' });
     await connectButton.click();
