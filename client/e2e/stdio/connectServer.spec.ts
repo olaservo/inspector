@@ -27,6 +27,20 @@ test.describe('Connect MCP Server Using stdio In Inspector UI', () => {
     const connectedText = page.getByText('Connected');
     await expect(connectedText).toBeVisible({ timeout: 10000 });
 
+    // Find and expand the initialize entry in History
+    const initializeEntry = page.getByText('1. initialize');
+    await expect(initializeEntry).toBeVisible();
+    await initializeEntry.click();
+
+    // Verify server info content in initialize response from History pane
+    const jsonView = page.getByTestId('history-entry-0-response')
+      .locator('.font-mono');
+    await expect(jsonView).toBeVisible();
+    await expect(jsonView).toContainText('capabilities');
+    await expect(jsonView).toContainText('serverInfo');
+    await expect(jsonView).toContainText('example-servers/everything');
+    await expect(jsonView).toContainText('version');
+
     // Navigate to Tools tab and wait for it to be active
     const toolsTab = page.getByRole('tab', { name: 'Tools' });
     await toolsTab.click();
