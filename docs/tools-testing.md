@@ -4,6 +4,8 @@ This guide provides detailed information about how different types of tool input
 
 ## Input Type Handling
 
+### Basic Types
+
 | Type | Example Schema | Expected Input | Form Behavior | Notes |
 |------|---------------|----------------|---------------|--------|
 | `integer` | `{ "type": "integer" }` | `42` | Number input with step=1 | Must be whole number, no decimals |
@@ -12,18 +14,99 @@ This guide provides detailed information about how different types of tool input
 | `boolean` | `{ "type": "boolean" }` | `true`/`false` | Checkbox | Toggle between true/false |
 | `null` | `{ "type": "null" }` | `null` | N/A | Typically used in unions |
 
+### Integer Type Requirements
+
+1. Form Input Requirements:
+   - MUST use HTML `<input type="number">` with `step="1"`
+   - MUST prevent decimal input via step validation
+   - MUST display validation error for non-integer values
+   - SHOULD support keyboard up/down for increment/decrement
+
+2. Value Handling:
+   - MUST convert string inputs to proper integer type
+   - MUST reject decimal values (e.g., "1.5")
+   - MUST reject scientific notation (e.g., "1e2")
+   - MUST reject non-numeric strings (e.g., "abc")
+   - MUST handle integer constraints:
+     ```json
+     {
+       "type": "integer",
+       "minimum": 0,
+       "maximum": 100
+     }
+     ```
+
+3. Request Payload:
+   - MUST send as JSON number, not string
+   - Correct: `{"count": 42}`
+   - Incorrect: `{"count": "42"}`
+
+### Type Conversion Rules
+
+| Input Type | Target Type | Conversion Behavior | Example |
+|------------|-------------|-------------------|---------|
+| String → Integer | `integer` | Reject if not whole number | "42" → 42, "1.5" → error |
+| Number → Integer | `integer` | Reject if not whole number | 42 → 42, 1.5 → error |
+| String → Number | `number` | Convert if valid number | "42.5" → 42.5 |
+| String → Boolean | `boolean` | Only accept "true"/"false" | "true" → true |
+
 ## Optional Parameters
 
-| Scenario | Schema | Expected Behavior | Example |
-|----------|--------|------------------|---------|
-| Optional field unset | `{ "type": "string", "required": false }` | Parameter omitted from request | `{}` |
-| Optional field set to null | `{ "type": ["string", "null"] }` | Parameter included as null | `{ "field": null }` |
-| Required field | `{ "type": "string", "required": true }` | Must have value | `{ "field": "value" }` |
+### Parameter Handling Rules
+
+1. When an optional parameter is not set by the user:
+   - The parameter should be completely omitted from the request
+   - Do NOT send the parameter as `null`
+   - Example: If `name` is optional and unset: `{}` not `{"name": null}`
+
+2. When an optional parameter explicitly accepts null:
+   - Schema must declare null as valid: `{ "type": ["string", "null"] }`
+   - Only then may null be sent: `{ "name": null }`
+
+3. When an optional string is set to empty:
+   - Empty string is sent: `{ "name": "" }`
+   - Not omitted or set to null
+
+| Scenario | Schema | Expected Behavior | Example | Notes |
+|----------|--------|------------------|---------|-------|
+| Optional field unset | `{ "type": "string", "required": false }` | Parameter omitted from request | `{}` | Do not send null |
+| Optional field empty | `{ "type": "string", "required": false }` | Empty string sent | `{ "field": "" }` | For string types |
+| Nullable field set to null | `{ "type": ["string", "null"] }` | Parameter included as null | `{ "field": null }` | Schema must allow null |
+| Required field | `{ "type": "string", "required": true }` | Must have value | `{ "field": "value" }` | Never omitted |
+
+### Validation Requirements
+
+1. Schema Validation:
+   - Validate optional fields match schema type
+   - Ensure null is only allowed when specified
+   - Respect required field constraints
+
+2. Request Payload:
+   - Omit unset optional parameters
+   - Include empty strings when set
+   - Only send null for nullable types
 
 ## Complex Objects
 
-| Structure | Example Schema | Form Rendering | Example Input |
-|-----------|---------------|----------------|---------------|
+### Form Rendering Requirements
+
+1. UI Components:
+   - MUST provide both structured form AND raw JSON editor modes
+   - MUST allow switching between modes while preserving values
+   - MUST validate input in both modes
+   - SHOULD default to structured form for better UX
+
+2. Structured Form Features:
+   - MUST use appropriate input types for each field
+   - MUST show field labels and descriptions
+   - MUST indicate required fields
+   - MUST provide real-time validation
+   - SHOULD group related fields logically
+
+### Object Structure Types
+
+| Structure | Example Schema | Form Rendering Requirements | Example Input |
+|-----------|---------------|---------------------------|---------------|
 | Simple Object | ```json
 {
   "type": "object",
@@ -32,7 +115,10 @@ This guide provides detailed information about how different types of tool input
     "age": { "type": "integer" }
   }
 }
-``` | Individual fields | ```json
+``` | - Render as fieldset
+- Group related fields
+- Show field labels
+- Use appropriate input types | ```json
 {
   "name": "John",
   "age": 30
@@ -51,7 +137,10 @@ This guide provides detailed information about how different types of tool input
     }
   }
 }
-``` | Expandable sections | ```json
+``` | - Use collapsible sections
+- Show object path in labels
+- Allow expand/collapse all
+- Maintain state on mode switch | ```json
 {
   "user": {
     "name": "John",
@@ -70,7 +159,11 @@ This guide provides detailed information about how different types of tool input
     }
   }
 }
-``` | Dynamic list with Add/Remove | ```json
+``` | - Show Add/Remove buttons
+- Support item reordering
+- Collapsible array items
+- Maintain array indices
+- Show item count | ```json
 [
   {
     "name": "Item 1",
@@ -82,6 +175,32 @@ This guide provides detailed information about how different types of tool input
   }
 ]
 ``` |
+
+### Complex Form Behaviors
+
+1. Array Operations:
+   - Add Item: Append new item with default values
+   - Remove Item: Delete selected item and reindex
+   - Reorder: Drag-and-drop support with index update
+   - Validation: Validate array constraints (min/max items)
+
+2. Nested Object Handling:
+   - Path Display: Show full object path in labels
+   - State Management: Preserve expand/collapse state
+   - Validation: Validate at all nesting levels
+   - Navigation: Provide breadcrumb navigation
+
+3. Form State:
+   - MUST preserve values when switching modes
+   - MUST maintain validation state
+   - MUST keep focus position when possible
+   - SHOULD warn about unsaved changes
+
+4. Error Handling:
+   - Show errors at correct nesting level
+   - Highlight invalid fields in context
+   - Provide clear error messages
+   - Support field-level and form-level validation
 
 ## Common Testing Scenarios
 
