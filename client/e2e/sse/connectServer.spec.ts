@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Connect MCP Server Using SSE In Inspector UI', () => {
 
-test('should connect to test server using SSE and verify echo tool', async ({ page }) => {
+  test('should connect to test server using SSE and verify echo tool', async ({ page }) => {
     // Load the inspector UI
     await page.goto('/');
 
@@ -62,5 +62,54 @@ test('should connect to test server using SSE and verify echo tool', async ({ pa
 
     // Verify the response with increased timeout
     await expect(page.getByText('Echo: Hello MCP!')).toBeVisible({ timeout: 10000 });
+  });
+
+  test('completes OAuth authentication flow', async ({ page }) => {
+    /* TODO: Add auth wrapper and reference for tests, then complete the following:
+      * This test will verify the e2e OAuth authentication flow:
+      * - Verify 401 Unauthorized triggers OAuth flow
+      * - Check OAuth metadata endpoint access (no CORS errors)
+      * - Verify redirect sequence
+      * 
+      * Post-Auth Verification:
+      * - Verify successful connection after auth
+      * - Check server capabilities and tools access
+      */
+
+    // Load the inspector UI
+    await page.goto('/');
+
+    // Set server URL and transport type in localStorage
+    await page.evaluate(() => {
+      localStorage.setItem('lastSseUrl', 'http://localhost:3001/sse');
+      localStorage.setItem('lastTransportType', 'sse');
+    });
+    await page.reload();
+
+    // Collect all console messages
+    const consoleMessages: string[] = [];
+    page.on('console', msg => {
+      consoleMessages.push(msg.text());
+    });
+
+    // Wait for and click connect button
+    const connectButton = await page.waitForSelector('[data-testid="connect-button"]', { state: 'visible' });
+    await connectButton.click();
+
+    // Original assertions from previous implementation attempt for reference:
+    // Wait for login page redirect to consent UI
+    // await page.waitForURL(/localhost:3001\/consent/, { timeout: 35000 }); // Increased to account for 30s delay
+
+    // Verify console messages appeared in correct order
+    expect(consoleMessages).toContainEqual(expect.stringContaining('401 (Unauthorized)'));
+    // expect(consoleMessages).toContainEqual(expect.stringContaining('Failed to connect to MCP Server via the MCP Inspector Proxy'));
+    // expect(consoleMessages).toContainEqual(expect.stringContaining('[Auth Flow] Got 401, starting OAuth flow'));
+    // expect(consoleMessages).toContainEqual(expect.stringContaining('[Auth Flow] Saved server URL:'));
+    
+    // Verify OAuth metadata endpoint was accessed successfully (no CORS error)
+    expect(consoleMessages).not.toContainEqual(expect.stringContaining('blocked by CORS policy'));
+    
+    // Verify redirect sequence
+    // expect(consoleMessages).toContainEqual(expect.stringContaining('[Auth Flow] Redirecting to:'));
   });
 });
