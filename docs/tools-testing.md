@@ -20,7 +20,6 @@ This guide provides detailed information about how different types of tool input
    - MUST use HTML `<input type="number">` with `step="1"`
    - MUST prevent decimal input via step validation
    - MUST display validation error for non-integer values
-   - SHOULD support keyboard up/down for increment/decrement
 
 2. Value Handling:
    - MUST convert string inputs to proper integer type
@@ -94,87 +93,6 @@ This guide provides detailed information about how different types of tool input
    - MUST provide both structured form AND raw JSON editor modes
    - MUST allow switching between modes while preserving values
    - MUST validate input in both modes
-   - SHOULD default to structured form for better UX
-
-2. Structured Form Features:
-   - MUST use appropriate input types for each field
-   - MUST show field labels and descriptions
-   - MUST indicate required fields
-   - MUST provide real-time validation
-   - SHOULD group related fields logically
-
-### Object Structure Types
-
-| Structure | Example Schema | Form Rendering Requirements | Example Input |
-|-----------|---------------|---------------------------|---------------|
-| Simple Object | ```json
-{
-  "type": "object",
-  "properties": {
-    "name": { "type": "string" },
-    "age": { "type": "integer" }
-  }
-}
-``` | - Render as fieldset
-- Group related fields
-- Show field labels
-- Use appropriate input types | ```json
-{
-  "name": "John",
-  "age": 30
-}
-``` |
-| Nested Object | ```json
-{
-  "type": "object",
-  "properties": {
-    "user": {
-      "type": "object",
-      "properties": {
-        "name": { "type": "string" },
-        "age": { "type": "integer" }
-      }
-    }
-  }
-}
-``` | - Use collapsible sections
-- Show object path in labels
-- Allow expand/collapse all
-- Maintain state on mode switch | ```json
-{
-  "user": {
-    "name": "John",
-    "age": 30
-  }
-}
-``` |
-| Array of Objects | ```json
-{
-  "type": "array",
-  "items": {
-    "type": "object",
-    "properties": {
-      "name": { "type": "string" },
-      "quantity": { "type": "integer" }
-    }
-  }
-}
-``` | - Show Add/Remove buttons
-- Support item reordering
-- Collapsible array items
-- Maintain array indices
-- Show item count | ```json
-[
-  {
-    "name": "Item 1",
-    "quantity": 2
-  },
-  {
-    "name": "Item 2",
-    "quantity": 1
-  }
-]
-``` |
 
 ### Complex Form Behaviors
 
@@ -212,15 +130,6 @@ This guide provides detailed information about how different types of tool input
 | Optional field handling | Leave optional field empty | Field omitted from request |
 | Array manipulation | Add/remove items in array | Dynamic list updates correctly |
 
-## Validation Rules
-
-| Type | Validation Rules | Example Schema | Invalid Examples |
-|------|-----------------|----------------|------------------|
-| `integer` | - Must be whole number<br>- No decimals<br>- No scientific notation | `{ "type": "integer" }` | "1.5", "1e2", "abc" |
-| `number` | - Can be integer or decimal<br>- Scientific notation allowed | `{ "type": "number" }` | "abc", "1,000" |
-| `string` | - Any text value<br>- Empty string allowed unless required | `{ "type": "string" }` | N/A |
-| `boolean` | - Must be true/false<br>- No truthy/falsy values | `{ "type": "boolean" }` | "true", 1, "yes" |
-
 ## Error Handling
 
 | Error Scenario | Expected Behavior | Example |
@@ -229,33 +138,6 @@ This guide provides detailed information about how different types of tool input
 | Missing required field | Error highlighting missing field | "Required field 'name' is missing" |
 | Invalid JSON in editor | Real-time validation error | "Invalid JSON: Unexpected token }" |
 | Schema validation failure | Show which part of schema failed | "Value '1.5' at .age does not match integer type" |
-
-## Best Practices
-
-1. **Schema Design**
-   - Use clear, descriptive property names
-   - Include descriptions for complex fields
-   - Mark required fields appropriately
-   - Use proper types (e.g., `integer` vs `number`)
-
-2. **Form Testing**
-   - Test all input types
-   - Verify required field validation
-   - Check nested object rendering
-   - Test array manipulation
-   - Verify proper type conversion
-
-3. **Error Handling**
-   - Validate input types strictly
-   - Provide clear error messages
-   - Show validation in real-time
-   - Handle optional fields correctly
-
-4. **Complex Structures**
-   - Test deeply nested objects
-   - Verify array item handling
-   - Check form/JSON mode switching
-   - Validate complex schemas fully
 
 ## Troubleshooting
 
