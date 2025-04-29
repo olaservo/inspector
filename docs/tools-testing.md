@@ -25,6 +25,17 @@ The Tools UI provides both structured form and raw JSON editor modes.  For suppo
 | String → Number | `number` | Convert if valid number | "42.5" → 42.5 |
 | String → Boolean | `boolean` | Only accept "true"/"false" | "true" → true |
 
+## Complex Objects
+
+TODO
+
+## Testing Scenarios and Expected Results for Complex Objects
+
+| Test Case | Description | Expected Behavior |
+|-----------|-------------|------------------|
+| Complex nested form fields | Tool with multiple levels of nested objects | Only JSON mode is available |
+| Array field manipulation | Add/remove items in array | Form mode allows for items to be added and removed |
+
 ## Optional Parameters
 
 **When an optional parameter is not set by the user:**
@@ -37,14 +48,3 @@ The Tools UI provides both structured form and raw JSON editor modes.  For suppo
 
 **When an optional string is set to empty:**
 - Empty string will be sent, eg: `{ "name": "" }`
-
-## Complex Objects
-
-TODO
-
-## Common Testing Scenarios and Expected Results for Complex Objects
-
-| Test Case | Description | Expected Behavior |
-|-----------|-------------|------------------|
-| Complex nested form | Tool with nested objects | Only JSON mode is available |
-| Array field manipulation | Add/remove items in array | Dynamic list updates correctly |
