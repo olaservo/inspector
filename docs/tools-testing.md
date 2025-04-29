@@ -27,7 +27,32 @@ The Tools UI provides both structured form and raw JSON editor modes.  For suppo
 
 ## Complex Objects
 
-TODO
+Complex objects include nested structures (objects within objects) and arrays. Their handling differs between form and JSON modes based on complexity.
+
+### Array Handling
+
+| Type | Example Schema | Expected Input | Form Behavior |
+|------|---------------|----------------|---------------|
+| Simple Array | `{ "type": "array", "items": { "type": "string" }}` | `["item1", "item2"]` | Dynamic list with add/remove buttons |
+| Object Array | `{ "type": "array", "items": { "type": "object" }}` | `[{"name": "item1"}, {"name": "item2"}]` | Dynamic form rows with nested fields |
+| Optional Array | `{ "type": ["array", "null"] }` | `[]` or omitted | Empty array or field omitted, never `null` |
+
+### Nested Objects
+
+| Structure | Example Schema | Form Mode | JSON Mode |
+|-----------|---------------|------------|------------|
+| Single Level | `{"type": "object", "properties": {"name": {"type": "string"}}}` | Structured form | Available |
+| Multi Level | `{"type": "object", "properties": {"user": {"type": "object"}}}` | JSON only | Available |
+| Mixed Types | `{"type": "object", "properties": {"data": {"oneOf": [...]}}}` | JSON only | Available |
+
+### Optional Fields in Complex Types
+
+| Scenario | Example | Expected Behavior |
+|----------|---------|------------------|
+| Optional object | `{"type": ["object", "null"]}` | Omit field entirely, do not send `null` |
+| Optional array | `{"type": ["array", "null"]}` | Omit field entirely, do not send `null` |
+| Nullable field | `{"type": ["string", "null"]}` | May explicitly set to `null` |
+| Empty array | `{"type": "array"}` | Send `[]` if empty |
 
 ## Testing Scenarios and Expected Results for Complex Objects
 
@@ -35,6 +60,10 @@ TODO
 |-----------|-------------|------------------|
 | Complex nested form fields | Tool with multiple levels of nested objects | Only JSON mode is available |
 | Array field manipulation | Add/remove items in array | Form mode allows for items to be added and removed |
+| Optional nested fields | Object with optional nested properties | Field omitted entirely when not set |
+| Mixed type arrays | Array accepting multiple types | Only JSON mode is available |
+| Nullable vs Optional | Field allowing null vs optional field | Null explicitly set vs field omitted |
+| Empty collections | Empty arrays or objects | Send `[]` or `{}` if empty, omit if optional |
 
 ## Optional Parameters
 
