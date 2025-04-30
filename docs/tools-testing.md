@@ -49,10 +49,10 @@ Complex objects include nested structures (objects within objects) and arrays. T
 
 | Scenario | Example | Expected Behavior |
 |----------|---------|------------------|
-| Optional object | `{"type": ["object", "null"]}` | Omit field entirely, do not send `null` |
-| Optional array | `{"type": ["array", "null"]}` | Omit field entirely, do not send `null` |
+| Optional field (any type) | `{"required": false}` | Omit field entirely from request |
 | Nullable field | `{"type": ["string", "null"]}` | May explicitly set to `null` |
-| Empty array | `{"type": "array"}` | Send `[]` if empty |
+| Empty array (when set) | `{"type": "array"}` | Send `[]` if explicitly set empty |
+| Empty object (when set) | `{"type": "object"}` | Send `{}` if explicitly set empty |
 
 ## Testing Scenarios and Expected Results for Complex Objects
 
@@ -63,7 +63,7 @@ Complex objects include nested structures (objects within objects) and arrays. T
 | Optional nested fields | Object with optional nested properties | Field omitted entirely when not set |
 | Mixed type arrays | Array accepting multiple types | Only JSON mode is available |
 | Nullable vs Optional | Field allowing null vs optional field | Null explicitly set vs field omitted |
-| Empty collections | Empty arrays or objects | Send `[]` or `{}` if empty, omit if optional |
+| Empty collections | Empty arrays or objects | Send `[]` or `{}` only if explicitly set, otherwise omit |
 
 ## Optional Parameters
 
