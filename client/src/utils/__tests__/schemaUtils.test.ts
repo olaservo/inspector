@@ -45,6 +45,19 @@ describe("generateDefaultValue", () => {
     expect(generateDefaultValue({ type: "object", required: false })).toBeUndefined();
   });
 
+  
+  test("generates null for non-required primitive types", () => {
+    expect(generateDefaultValue({ type: "string", required: false })).toBe(
+      undefined,
+    );
+    expect(generateDefaultValue({ type: "number", required: false })).toBe(
+      undefined,
+    );
+    expect(generateDefaultValue({ type: "boolean", required: false })).toBe(
+      undefined,
+    );
+  });
+
   test("generates empty array when required", () => {
     expect(generateDefaultValue({ type: "array", required: true })).toEqual([]);
   });
