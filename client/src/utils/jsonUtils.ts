@@ -7,7 +7,7 @@ export type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue };
 
-export type SchemaType = 
+export type SchemaType =
   | "string"
   | "number"
   | "integer"
