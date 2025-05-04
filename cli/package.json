@@ -17,7 +17,9 @@
   "scripts": {
     "build": "tsc",
     "postbuild": "node scripts/make-executable.js",
-    "test": "node scripts/cli-tests.js"
+    "test": "node scripts/cli-tests.js",
+    "test:timeouts": "node scripts/timeout-tests.js",
+    "test:all": "npm run test && npm run test:timeouts"
   },
   "devDependencies": {},
   "dependencies": {
