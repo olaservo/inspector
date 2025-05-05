@@ -66,8 +66,63 @@ process.on("exit", () => {
   }
 });
 
-// Function to run a basic test
-async function runBasicTest(testName, ...args) {
+// Helper function to analyze output for timeout behavior verification
+function analyzeTimeoutBehavior(output, testName, expectedBehavior) {
+  const lines = output.split("\n");
+  
+  console.log(`${colors.BLUE}Analyzing timeout behavior for ${testName}...${colors.NC}`);
+  
+  // Extract key timing information
+  const progressUpdates = lines.filter(line => line.includes("Progress update received"));
+  const timeoutMessages = lines.filter(line => line.includes("timeout") || line.includes("timed out"));
+  const errorMessages = lines.filter(line => line.includes("Error") || line.includes("Failed"));
+  
+  console.log(`${colors.BLUE}Found ${progressUpdates.length} progress updates${colors.NC}`);
+  
+  if (progressUpdates.length > 0) {
+    console.log(`${colors.BLUE}First progress update: ${progressUpdates[0]}${colors.NC}`);
+    if (progressUpdates.length > 1) {
+      console.log(`${colors.BLUE}Last progress update: ${progressUpdates[progressUpdates.length-1]}${colors.NC}`);
+    }
+  }
+  
+  if (timeoutMessages.length > 0) {
+    console.log(`${colors.BLUE}Timeout messages: ${timeoutMessages.join("\n")}${colors.NC}`);
+  }
+  
+  if (errorMessages.length > 0) {
+    console.log(`${colors.BLUE}Error messages: ${errorMessages.join("\n")}${colors.NC}`);
+  }
+  
+  switch(expectedBehavior) {
+    case "should_reset_timeout":
+      // For tests where resetTimeoutOnProgress is true, we expect:
+      // 1. Multiple progress updates (more than 2) 
+      // 2. No timeout errors before completion
+      // 3. Successful completion
+      return progressUpdates.length >= 3 && 
+             !output.includes("Request timed out") && 
+             !output.includes("Maximum total timeout exceeded");
+    
+    case "should_timeout_quickly":
+      // For tests where resetTimeoutOnProgress is false, we expect:
+      // 1. Few progress updates (less than 3)
+      // 2. A timeout error
+      return progressUpdates.length < 3 && 
+             (output.includes("Request timed out") || output.includes("timed out"));
+    
+    case "should_hit_max_timeout":
+      // For tests where maxTotalTimeout should be hit, we expect:
+      // 1. Error mentioning maximum total timeout
+      return output.includes("Maximum total timeout exceeded");
+      
+    default:
+      return null; // No specific expectation
+  }
+}
+
+// Function to run a basic test with timeout behavior verification
+async function runBasicTest(testName, expectedBehavior, ...args) {
   const outputFile = path.join(
     OUTPUT_DIR,
     `${testName.replace(/\//g, "_")}.log`,
@@ -106,6 +161,24 @@ async function runBasicTest(testName, ...args) {
 
       child.on("close", (code) => {
         outputStream.end();
+        
+        // For specific timeout behavior tests, validate the behavior
+        if (expectedBehavior) {
+          const behaviorCorrect = analyzeTimeoutBehavior(output, testName, expectedBehavior);
+          
+          if (behaviorCorrect === true) {
+            console.log(`${colors.GREEN}✓ Timeout behavior test passed: ${testName}${colors.NC}`);
+            PASSED_TESTS++;
+            resolve(true);
+            return;
+          } else if (behaviorCorrect === false) {
+            console.log(`${colors.RED}✗ Timeout behavior test failed: ${testName}${colors.NC}`);
+            console.log(`${colors.RED}Expected: ${expectedBehavior}${colors.NC}`);
+            console.log(`${colors.RED}Output did not match expected behavior${colors.NC}`);
+            FAILED_TESTS++;
+            process.exit(1);
+          }
+        }
 
         if (code === 0) {
           console.log(`${colors.GREEN}✓ Test passed: ${testName}${colors.NC}`);
@@ -146,8 +219,8 @@ async function runBasicTest(testName, ...args) {
   }
 }
 
-// Function to run an error test (expected to fail)
-async function runErrorTest(testName, ...args) {
+// Function to run an error test (expected to fail) with timeout behavior verification
+async function runErrorTest(testName, expectedBehavior, ...args) {
   const outputFile = path.join(
     OUTPUT_DIR,
     `${testName.replace(/\//g, "_")}.log`,
@@ -186,12 +259,38 @@ async function runErrorTest(testName, ...args) {
 
       child.on("close", (code) => {
         outputStream.end();
+        
+        // For specific timeout behavior tests, validate the behavior
+        if (expectedBehavior) {
+          const behaviorCorrect = analyzeTimeoutBehavior(output, testName, expectedBehavior);
+          
+          if (behaviorCorrect === true) {
+            console.log(`${colors.GREEN}✓ Timeout behavior test passed: ${testName}${colors.NC}`);
+            PASSED_TESTS++;
+            resolve(true);
+            return;
+          } else if (behaviorCorrect === false) {
+            console.log(`${colors.RED}✗ Timeout behavior test failed: ${testName}${colors.NC}`);
+            console.log(`${colors.RED}Expected: ${expectedBehavior}${colors.NC}`);
+            console.log(`${colors.RED}Output did not match expected behavior${colors.NC}`);
+            FAILED_TESTS++;
+            process.exit(1);
+          }
+        }
 
         // For error tests, we expect a non-zero exit code
         if (code !== 0) {
-          console.log(
-            `${colors.GREEN}✓ Error test passed: ${testName}${colors.NC}`,
-          );
+          // Look for specific timeout errors
+          if (testName.includes("timeout") && (output.includes("timeout") || output.includes("timed out"))) {
+            console.log(
+              `${colors.GREEN}✓ Timeout error test passed: ${testName}${colors.NC}`,
+            );
+          } else {
+            console.log(
+              `${colors.GREEN}✓ Error test passed: ${testName}${colors.NC}`,
+            );
+          }
+          
           console.log(`${colors.BLUE}Error output (expected):${colors.NC}`);
           const firstFewLines = output
             .split("\n")
@@ -240,6 +339,7 @@ async function runTests() {
   // Test 1: Default timeout values
   await runBasicTest(
     "default_timeouts",
+    null,
     TEST_CMD,
     ...TEST_ARGS,
     "--cli",
@@ -250,6 +350,7 @@ async function runTests() {
   // Test 2: Custom request timeout
   await runBasicTest(
     "custom_request_timeout",
+    null,
     TEST_CMD,
     ...TEST_ARGS,
     "--cli",
@@ -267,6 +368,7 @@ async function runTests() {
   // Test 3: Request timeout too short (should fail)
   await runErrorTest(
     "short_request_timeout",
+    "should_timeout_quickly",
     TEST_CMD,
     ...TEST_ARGS,
     "--cli",
@@ -285,9 +387,10 @@ async function runTests() {
     `\n${colors.YELLOW}=== Running Progress-Related Timeout Tests ===${colors.NC}`,
   );
 
-  // Test 4: Reset timeout on progress enabled
+  // Test 4: Reset timeout on progress enabled - should complete successfully
   await runBasicTest(
     "reset_timeout_on_progress",
+    "should_reset_timeout",
     TEST_CMD,
     ...TEST_ARGS,
     "--cli",
@@ -296,19 +399,20 @@ async function runTests() {
     "--tool-name",
     "longRunningOperation",
     "--tool-arg",
-    "duration=10",
-    "steps=10",
+    "duration=15",    // 15 second operation
+    "steps=5",        // 5 steps = progress every 3 seconds
     "--request-timeout",
-    "2000",
+    "2000",          // 2 second timeout per interval
     "--reset-timeout-on-progress",
     "true",
     "--max-total-timeout",
     "30000",
   );
 
-  // Test 5: Reset timeout on progress disabled (should fail faster)
+  // Test 5: Reset timeout on progress disabled - should fail with timeout
   await runErrorTest(
     "reset_timeout_disabled",
+    "should_timeout_quickly",
     TEST_CMD,
     ...TEST_ARGS,
     "--cli",
@@ -317,12 +421,12 @@ async function runTests() {
     "--tool-name",
     "longRunningOperation",
     "--tool-arg",
-    "duration=10",
-    "steps=10",
+    "duration=15",    // Same configuration as above
+    "steps=5",        
     "--request-timeout",
-    "2000",
+    "2000",          
     "--reset-timeout-on-progress",
-    "false",
+    "false",         // Only difference is here
     "--max-total-timeout",
     "30000",
   );
@@ -334,6 +438,7 @@ async function runTests() {
   // Test 6: Max total timeout exceeded (should fail)
   await runErrorTest(
     "max_total_timeout_exceeded",
+    "should_hit_max_timeout",
     TEST_CMD,
     ...TEST_ARGS,
     "--cli",
@@ -349,7 +454,7 @@ async function runTests() {
     "--reset-timeout-on-progress",
     "true",
     "--max-total-timeout",
-    "1000",
+    "3000",  // 3 second total timeout
   );
 
   console.log(
@@ -359,6 +464,7 @@ async function runTests() {
   // Test 7: Invalid request timeout value
   await runErrorTest(
     "invalid_request_timeout",
+    null,
     TEST_CMD,
     ...TEST_ARGS,
     "--cli",
@@ -371,6 +477,7 @@ async function runTests() {
   // Test 8: Invalid reset-timeout-on-progress value
   await runErrorTest(
     "invalid_reset_timeout",
+    null,
     TEST_CMD,
     ...TEST_ARGS,
     "--cli",
@@ -383,6 +490,7 @@ async function runTests() {
   // Test 9: Invalid max total timeout value
   await runErrorTest(
     "invalid_max_timeout",
+    null,
     TEST_CMD,
     ...TEST_ARGS,
     "--cli",
