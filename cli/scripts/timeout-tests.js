@@ -46,7 +46,7 @@ const TEST_CMD = "npx";
 const TEST_ARGS = ["@modelcontextprotocol/server-everything"];
 
 // Create output directory for test results
-const OUTPUT_DIR = path.join(SCRIPTS_DIR, "timeout-test-output");
+const OUTPUT_DIR = path.join(SCRIPTS_DIR, "test-output");
 if (!fs.existsSync(OUTPUT_DIR)) {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 }
