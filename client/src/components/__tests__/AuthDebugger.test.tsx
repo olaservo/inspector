@@ -44,9 +44,8 @@ jest.mock("@modelcontextprotocol/sdk/client/auth.js", () => ({
   exchangeAuthorization: jest.fn(),
 }));
 
-// Import mocked functions
+// Import mocked functions (removing unused mockAuth)
 import {
-  auth as mockAuth,
   discoverOAuthMetadata as mockDiscoverOAuthMetadata,
   registerClient as mockRegisterClient,
   startAuthorization as mockStartAuthorization,

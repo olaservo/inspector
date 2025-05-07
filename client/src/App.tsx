@@ -36,13 +36,12 @@ import {
   FolderTree,
   Hammer,
   Hash,
-  Key,
   MessageSquare,
 } from "lucide-react";
 
 import { z } from "zod";
 import "./App.css";
-import AuthDebugger from "./components/AuthDebugger";
+const AuthDebugger = React.lazy(() => import("./components/AuthDebugger"));
 import ConsoleTab from "./components/ConsoleTab";
 import HistoryAndNotifications from "./components/History";
 import PingTab from "./components/PingTab";
@@ -139,7 +138,7 @@ const App = () => {
       }
     >
   >([]);
-  const [showAuthDebugger, setShowAuthDebugger] = useState(false);
+  const [isAuthDebuggerVisible, setIsAuthDebuggerVisible] = useState(false);
   const nextRequestId = useRef(0);
   const rootsRef = useRef<Root[]>([]);
 
@@ -244,10 +243,7 @@ const App = () => {
 
   // Auto-connect to previously saved serverURL after OAuth callback
   const onOAuthDebugConnect = useCallback(() => {
-    // setSseUrl(serverUrl);
-    // setTransportType("sse");
-    // void connectMcpServer();
-    setShowAuthDebugger(true);
+    setIsAuthDebuggerVisible(true);
   }, []);
 
   useEffect(() => {
@@ -483,26 +479,35 @@ const App = () => {
     setStdErrNotifications([]);
   };
 
-  if (window.location.pathname === "/oauth/callback") {
-    const OAuthCallback = React.lazy(
-      () => import("./components/OAuthCallback"),
-    );
+  // Helper component for rendering the AuthDebugger
+  const AuthDebuggerWrapper = () => (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AuthDebugger
+        sseUrl={sseUrl}
+        onBack={() => setIsAuthDebuggerVisible(false)}
+      />
+    </Suspense>
+  );
+
+  // Helper function to render OAuth callback components
+  const renderOAuthCallback = (path: string, onConnect: (serverUrl: string) => void) => {
+    const Component = path === "/oauth/callback" 
+      ? React.lazy(() => import("./components/OAuthCallback"))
+      : React.lazy(() => import("./components/OAuthDebugCallback"));
+    
     return (
       <Suspense fallback={<div>Loading...</div>}>
-        <OAuthCallback onConnect={onOAuthConnect} />
+        <Component onConnect={onConnect} />
       </Suspense>
     );
+  };
+
+  if (window.location.pathname === "/oauth/callback") {
+    return renderOAuthCallback(window.location.pathname, onOAuthConnect);
   }
 
   if (window.location.pathname === "/oauth/callback/debug") {
-    const OAuthCallback = React.lazy(
-      () => import("./components/OAuthDebugCallback"),
-    );
-    return (
-      <Suspense fallback={<div>Loading...</div>}>
-        <OAuthCallback onConnect={onOAuthDebugConnect} />
-      </Suspense>
-    );
+    return renderOAuthCallback(window.location.pathname, onOAuthDebugConnect);
   }
 
   return (
@@ -591,10 +596,6 @@ const App = () => {
                 <TabsTrigger value="roots">
                   <FolderTree className="w-4 h-4 mr-2" />
                   Roots
-                </TabsTrigger>
-                <TabsTrigger value="auth">
-                  <Key className="w-4 h-4 mr-2" />
-                  Auth
                 </TabsTrigger>
               </TabsList>
 
@@ -727,19 +728,13 @@ const App = () => {
                       setRoots={setRoots}
                       onRootsChange={handleRootsChange}
                     />
-                    <AuthDebugger
-                      sseUrl={sseUrl}
-                      onBack={() => setShowAuthDebugger(false)}
-                    />
+                    <AuthDebuggerWrapper />
                   </>
                 )}
               </div>
             </Tabs>
-          ) : showAuthDebugger ? (
-            <AuthDebugger
-              sseUrl={sseUrl}
-              onBack={() => setShowAuthDebugger(false)}
-            />
+          ) : isAuthDebuggerVisible ? (
+            <AuthDebuggerWrapper />
           ) : (
             <div className="flex flex-col items-center justify-center h-full gap-4">
               <p className="text-lg text-gray-500">
@@ -752,7 +747,7 @@ const App = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowAuthDebugger(true)}
+                  onClick={() => setIsAuthDebuggerVisible(true)}
                 >
                   Open Auth Settings
                 </Button>

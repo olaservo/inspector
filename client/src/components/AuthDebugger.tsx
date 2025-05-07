@@ -20,6 +20,9 @@ import {
 } from "@modelcontextprotocol/sdk/shared/auth.js";
 import { CheckCircle2, Circle, ExternalLink } from "lucide-react";
 
+// Type for the toast function from the useToast hook
+type ToastFunction = ReturnType<typeof useToast>["toast"];
+
 interface AuthDebuggerProps {
   sseUrl: string;
   onBack: () => void;
@@ -37,14 +40,14 @@ type OAuthStep =
 
 // Enhanced version of the OAuth client provider specifically for debug flows
 class DebugInspectorOAuthClientProvider extends InspectorOAuthClientProvider {
-  get redirectUrl() {
-    return window.location.origin + "/oauth/callback/debug";
+  get redirectUrl(): string {
+    return `${window.location.origin}/oauth/callback/debug`;
   }
 }
 
 const validateOAuthMetadata = (
   metadata: OAuthMetadata | null,
-  toast: (arg0: object) => void,
+  toast: ToastFunction,
 ): OAuthMetadata => {
   if (!metadata) {
     toast({
@@ -59,7 +62,7 @@ const validateOAuthMetadata = (
 
 const validateClientInformation = async (
   provider: DebugInspectorOAuthClientProvider,
-  toast: (arg0: object) => void,
+  toast: ToastFunction,
 ): Promise<OAuthClientInformation> => {
   const clientInformation = await provider.clientInformation();
 
@@ -115,25 +118,29 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
     loadOAuthTokens();
   }, [sseUrl]); // Check for debug callback code
 
+  // Check for debug callback code and load client info
   useEffect(() => {
-    const loadSessionInfo = async () => {
-      const debugCode = sessionStorage.getItem(SESSION_KEYS.DEBUG_CODE);
-      if (debugCode && sseUrl) {
-        // We've returned from a debug OAuth callback with a code
-        setAuthorizationCode(debugCode);
-        setOAuthFlowVisible(true);
+    const debugCode = sessionStorage.getItem(SESSION_KEYS.DEBUG_CODE);
+    if (debugCode && sseUrl) {
+      // We've returned from a debug OAuth callback with a code
+      setAuthorizationCode(debugCode);
+      setOAuthFlowVisible(true);
+      setOAuthStep("token_request");
 
-        // Set the OAuth flow step to token request
-        setOAuthStep("token_request");
-        const provider = new DebugInspectorOAuthClientProvider(sseUrl);
-        setOAuthClientInfo((await provider.clientInformation()) || null);
+      // Load client info asynchronously
+      const provider = new DebugInspectorOAuthClientProvider(sseUrl);
+      provider
+        .clientInformation()
+        .then((info) => {
+          setOAuthClientInfo(info || null);
+        })
+        .catch((error) => {
+          console.error("Failed to load client information:", error);
+        });
 
-        // Now that we've processed it, clear the debug code
-        sessionStorage.removeItem(SESSION_KEYS.DEBUG_CODE);
-      }
-    };
-
-    loadSessionInfo();
+      // Now that we've processed it, clear the debug code
+      sessionStorage.removeItem(SESSION_KEYS.DEBUG_CODE);
+    }
   }, [sseUrl]);
 
   const startOAuthFlow = () => {
@@ -177,12 +184,23 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
 
         setOAuthStep("client_registration");
 
+        const clientMetadata = provider.clientMetadata;
+        // Add all supported scopes to client registration.
+        // This is the maximal set of scopes the client can request, the
+        // scope of the actual token is specified below
+        if (metadata.scopes_supported) {
+          // TODO: add this to schema
+          clientMetadata["scope"] = metadata.scopes_supported.join(" ");
+        }
+
         const fullInformation = await registerClient(sseUrl, {
           metadata,
-          clientMetadata: provider.clientMetadata,
+          clientMetadata,
         });
 
         provider.saveClientInformation(fullInformation);
+        // save it here to be more convenient for display
+        setOAuthClientInfo(fullInformation);
       } else if (oauthStep === "client_registration") {
         const metadata = validateOAuthMetadata(oauthMetadata, toast);
         const clientInformation = await validateClientInformation(
@@ -190,8 +208,6 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
           toast,
         );
         setOAuthStep("authorization_redirect");
-        // This custom implementation captures the OAuth flow step by step
-        // First, get or register the client
         try {
           const { authorizationUrl, codeVerifier } = await startAuthorization(
             sseUrl,
@@ -199,17 +215,25 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
               metadata,
               clientInformation,
               redirectUrl: provider.redirectUrl,
+              // TODO: fix this once SDK PR is merged
+              // scope: metadata.scopes_supported,
             },
           );
 
           provider.saveCodeVerifier(codeVerifier);
-          // Save this so the debug callback knows what to do
-          // await sessionStorage.setItem(SESSION_KEYS.SERVER_URL, sseUrl);
-          setAuthorizationUrl(authorizationUrl.toString());
-          // await provider.redirectToAuthorization(authorizationUrl);
-          setOAuthStep("authorization_code");
 
-          // await auth(serverAuthProvider, { serverUrl: sseUrl });
+          // TODO: remove this once scope is valid parameter above
+          // Modify the authorization URL to include all supported scopes
+          if (metadata.scopes_supported) {
+            //Add all supported scopes to the authorization URL
+            const url = new URL(authorizationUrl.toString());
+            url.searchParams.set("scope", metadata.scopes_supported.join(" "));
+            setAuthorizationUrl(url.toString());
+          } else {
+            setAuthorizationUrl(authorizationUrl.toString());
+          }
+
+          setOAuthStep("authorization_code");
         } catch (error) {
           console.error("OAuth flow step error:", error);
           toast({
@@ -237,7 +261,6 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
           toast,
         );
 
-        // const clientInformation = await provider.clientInformation();
         const tokens = await exchangeAuthorization(sseUrl, {
           metadata,
           clientInformation,
@@ -308,6 +331,7 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
       setOAuthStep("not_started");
       setOAuthFlowVisible(false);
       setLatestError(null);
+      setOAuthClientInfo(null);
       setAuthorizationCode("");
       toast({
         title: "Success",
@@ -329,7 +353,8 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
         metadata: oauthMetadata && (
           <details className="text-xs mt-2">
             <summary className="cursor-pointer text-muted-foreground font-medium">
-              Retrieved OAuth Metadata
+              Retrieved OAuth Metadata from {sseUrl}
+              /.well-known/oauth-authorization-server
             </summary>
             <pre className="mt-2 p-2 bg-muted rounded-md overflow-auto max-h-[300px]">
               {JSON.stringify(oauthMetadata, null, 2)}
@@ -364,6 +389,8 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center text-blue-500 hover:text-blue-700"
+                aria-label="Open authorization URL in new tab"
+                title="Open authorization URL"
               >
                 <ExternalLink className="h-4 w-4" />
               </a>
@@ -428,7 +455,11 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
             <summary className="cursor-pointer text-muted-foreground font-medium">
               Access Tokens
             </summary>
-            <p>Try listTools to use these credentials</p>
+            <p className="mt-1 text-sm">
+              Authentication successful! You can now use the authenticated
+              connection. These tokens will be used automatically for server
+              requests.
+            </p>
             <pre className="mt-2 p-2 bg-muted rounded-md overflow-auto max-h-[300px]">
               {JSON.stringify(oauthTokens, null, 2)}
             </pre>

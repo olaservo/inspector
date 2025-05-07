@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { SESSION_KEYS } from "../lib/constants";
 import { useToast } from "@/hooks/use-toast.ts";
 import {
@@ -12,17 +12,16 @@ interface OAuthCallbackProps {
 
 const OAuthDebugCallback = ({ onConnect }: OAuthCallbackProps) => {
   const { toast } = useToast();
-  const hasProcessedRef = useRef(false);
 
   useEffect(() => {
+    let isProcessed = false;
+
     const handleCallback = async () => {
       // Skip if we've already processed this callback
-      if (hasProcessedRef.current) {
+      if (isProcessed) {
         return;
       }
-      hasProcessedRef.current = true;
-
-      onConnect("");
+      isProcessed = true;
 
       const notifyError = (description: string) =>
         void toast({
@@ -42,6 +41,8 @@ const OAuthDebugCallback = ({ onConnect }: OAuthCallbackProps) => {
       // authentication request in a new tab, so we don't have the same
       // session storage
       if (!serverUrl) {
+        // If there's no server URL, we're likely in a new tab
+        // Just display the code for manual copying
         return;
       }
 
@@ -51,12 +52,14 @@ const OAuthDebugCallback = ({ onConnect }: OAuthCallbackProps) => {
 
       sessionStorage.setItem(SESSION_KEYS.DEBUG_CODE, params.code);
 
-      // Finally, trigger auto-connect
+      // Finally, trigger navigation back to auth debugger
       toast({
         title: "Success",
-        description: "Successfully authenticated with OAuth",
+        description: "Authorization code received. Please return to the Auth Debugger.",
         variant: "default",
       });
+      
+      // Call onConnect to navigate back to the auth debugger
       onConnect(serverUrl);
     };
 
@@ -67,6 +70,10 @@ const OAuthDebugCallback = ({ onConnect }: OAuthCallbackProps) => {
         window.history.replaceState({}, document.title, "/");
       }
     });
+
+    return () => {
+      isProcessed = true;
+    };
   }, [toast, onConnect]);
 
   const callbackParams = parseOAuthCallbackParams(window.location.search);
@@ -78,12 +85,8 @@ const OAuthDebugCallback = ({ onConnect }: OAuthCallbackProps) => {
           Please copy this authorization code and return to the Auth Debugger:
         </p>
         <code className="block p-2 bg-muted rounded-sm overflow-x-auto text-xs">
-          {callbackParams.successful
-            ? (
-                callbackParams as {
-                  code: string;
-                }
-              ).code
+          {callbackParams.successful && 'code' in callbackParams
+            ? callbackParams.code
             : `No code found: ${callbackParams.error}, ${callbackParams.error_description}`}
         </code>
         <p className="mt-4 text-xs text-muted-foreground">
