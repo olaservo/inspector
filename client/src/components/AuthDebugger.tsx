@@ -17,7 +17,7 @@ import { CheckCircle2, Circle, ExternalLink, AlertCircle } from "lucide-react";
 import { AuthDebuggerState } from "../lib/auth-types";
 import { SESSION_KEYS, getServerSpecificKey } from "../lib/constants";
 
-interface AuthDebuggerProps {
+export interface AuthDebuggerProps {
   sseUrl: string;
   onBack: () => void;
   authState: AuthDebuggerState;

@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { describe, it, beforeEach, jest } from "@jest/globals";
-import AuthDebugger from "../AuthDebugger";
+import AuthDebugger, { AuthDebuggerProps } from "../AuthDebugger";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Mock OAuth data that matches the schemas
@@ -57,7 +57,6 @@ import {
   startAuthorization,
   exchangeAuthorization,
 } from "@modelcontextprotocol/sdk/client/auth.js";
-import { AuthDebuggerState } from "@/lib/auth-types";
 
 // Type the mocked functions properly
 const mockDiscoverOAuthMetadata = discoverOAuthMetadata as jest.MockedFunction<
@@ -127,9 +126,7 @@ describe("AuthDebugger", () => {
     mockExchangeAuthorization.mockResolvedValue(mockOAuthTokens);
   });
 
-  const renderAuthDebugger = (
-    props: { authState?: AuthDebuggerState } = {},
-  ) => {
+  const renderAuthDebugger = (props: Partial<AuthDebuggerProps> = {}) => {
     const mergedProps = {
       ...defaultProps,
       ...props,
