@@ -4,6 +4,7 @@ import {
   OAuthClientInformation,
   OAuthTokens,
   OAuthTokensSchema,
+  OAuthClientMetadata,
 } from "@modelcontextprotocol/sdk/shared/auth.js";
 import { SESSION_KEYS, getServerSpecificKey } from "./constants";
 
@@ -17,7 +18,7 @@ export class InspectorOAuthClientProvider implements OAuthClientProvider {
     return window.location.origin + "/oauth/callback";
   }
 
-  get clientMetadata() {
+  get clientMetadata(): OAuthClientMetadata {
     return {
       redirect_uris: [this.redirectUrl],
       token_endpoint_auth_method: "none",

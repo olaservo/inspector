@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { InspectorOAuthClientProvider } from "../lib/auth";
 import {
@@ -137,7 +137,7 @@ const AuthDebugger = ({
         const clientMetadata = provider.clientMetadata;
         // Add all supported scopes to client registration.
         if (metadata.scopes_supported) {
-          clientMetadata["scope"] = metadata.scopes_supported.join(" ");
+          clientMetadata.scope = metadata.scopes_supported.join(" ");
         }
 
         const fullInformation = await registerClient(sseUrl, {
@@ -213,7 +213,7 @@ const AuthDebugger = ({
     } finally {
       updateAuthState({ isInitiatingAuth: false });
     }
-  }, [sseUrl, authState, updateAuthState]);
+  }, [sseUrl, authState, updateAuthState, validateOAuthMetadata]);
 
   const handleStartOAuth = useCallback(async () => {
     if (!sseUrl) {
