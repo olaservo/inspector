@@ -50,7 +50,7 @@ jest.mock("@modelcontextprotocol/sdk/client/auth.js", () => ({
   exchangeAuthorization: jest.fn(),
 }));
 
-// Import mocked functions (removing unused mockAuth)
+// Import mocked functions
 import {
   discoverOAuthMetadata as mockDiscoverOAuthMetadata,
   registerClient as mockRegisterClient,
@@ -188,10 +188,10 @@ describe("AuthDebugger", () => {
 
       await act(async () => {
         renderAuthDebugger({
-          authState: { 
-            ...defaultAuthState, 
-            oauthTokens: mockOAuthTokens 
-          }
+          authState: {
+            ...defaultAuthState,
+            oauthTokens: mockOAuthTokens,
+          },
         });
       });
 
@@ -240,9 +240,9 @@ describe("AuthDebugger", () => {
         renderAuthDebugger({
           authState: {
             ...defaultAuthState,
-            oauthTokens: mockOAuthTokens
+            oauthTokens: mockOAuthTokens,
           },
-          updateAuthState
+          updateAuthState,
         });
       });
 
@@ -276,9 +276,9 @@ describe("AuthDebugger", () => {
           updateAuthState,
           authState: {
             ...defaultAuthState,
-            isInitiatingAuth: false,  // Changed to false so button is enabled
-            oauthStep: "metadata_discovery"
-          }
+            isInitiatingAuth: false, // Changed to false so button is enabled
+            oauthStep: "metadata_discovery",
+          },
         });
       });
 
