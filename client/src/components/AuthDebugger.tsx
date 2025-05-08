@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { InspectorOAuthClientProvider } from "../lib/auth";
 import {
@@ -8,53 +8,20 @@ import {
   startAuthorization,
   exchangeAuthorization,
 } from "@modelcontextprotocol/sdk/client/auth.js";
-import { SESSION_KEYS, getServerSpecificKey } from "../lib/constants";
+import { SESSION_KEYS } from "../lib/constants";
 import {
-  OAuthTokensSchema,
   OAuthMetadataSchema,
   OAuthMetadata,
-  OAuthClientInformationFull,
   OAuthClientInformation,
-  OAuthTokens,
 } from "@modelcontextprotocol/sdk/shared/auth.js";
 import { CheckCircle2, Circle, ExternalLink, AlertCircle } from "lucide-react";
+import { AuthDebuggerState } from "../lib/auth-types";
 
 interface AuthDebuggerProps {
   sseUrl: string;
   onBack: () => void;
-}
-
-// OAuth flow steps
-type OAuthStep =
-  | "not_started"
-  | "metadata_discovery"
-  | "client_registration"
-  | "authorization_redirect"
-  | "authorization_code"
-  | "token_request"
-  | "complete";
-
-// Message types for inline feedback
-type MessageType = "success" | "error" | "info";
-
-interface StatusMessage {
-  type: MessageType;
-  message: string;
-}
-
-// Single state interface to replace multiple useState calls
-interface AuthDebuggerState {
-  isInitiatingAuth: boolean;
-  oauthTokens: OAuthTokens | null;
-  loading: boolean;
-  oauthStep: OAuthStep;
-  oauthMetadata: OAuthMetadata | null;
-  oauthClientInfo: OAuthClientInformationFull | OAuthClientInformation | null;
-  authorizationUrl: string | null;
-  authorizationCode: string;
-  latestError: Error | null;
-  statusMessage: StatusMessage | null;
-  validationError: string | null;
+  authState: AuthDebuggerState;
+  updateAuthState: (updates: Partial<AuthDebuggerState>) => void;
 }
 
 // Enhanced version of the OAuth client provider specifically for debug flows
@@ -64,79 +31,23 @@ class DebugInspectorOAuthClientProvider extends InspectorOAuthClientProvider {
   }
 }
 
-const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
-  // Single state object instead of multiple useState calls
-  const [state, setState] = useState<AuthDebuggerState>({
-    isInitiatingAuth: false,
-    oauthTokens: null,
-    loading: true,
-    oauthStep: "not_started",
-    oauthMetadata: null,
-    oauthClientInfo: null,
-    authorizationUrl: null,
-    authorizationCode: "",
-    latestError: null,
-    statusMessage: null,
-    validationError: null,
-  });
-
-  // Helper function to update specific state properties
-  const updateState = (updates: Partial<AuthDebuggerState>) => {
-    setState((prev) => ({ ...prev, ...updates }));
-  };
-
-  // Load OAuth tokens on component mount
-  useEffect(() => {
-    const loadOAuthTokens = async () => {
-      try {
-        if (sseUrl) {
-          const key = getServerSpecificKey(SESSION_KEYS.TOKENS, sseUrl);
-          const tokens = sessionStorage.getItem(key);
-          if (tokens) {
-            const parsedTokens = await OAuthTokensSchema.parseAsync(
-              JSON.parse(tokens),
-            );
-            updateState({
-              oauthTokens: parsedTokens,
-              oauthStep: "complete",
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Error loading OAuth tokens:", error);
-      } finally {
-        updateState({ loading: false });
-      }
-    };
-
-    loadOAuthTokens();
-  }, [sseUrl]);
-
-  // Check for debug callback code and load client info
+const AuthDebugger = ({ sseUrl, onBack, authState, updateAuthState }: AuthDebuggerProps) => {
+  // Load client info asynchronously when we have a debug code
   useEffect(() => {
     const debugCode = sessionStorage.getItem(SESSION_KEYS.DEBUG_CODE);
-    if (debugCode && sseUrl) {
-      // We've returned from a debug OAuth callback with a code
-      updateState({
-        authorizationCode: debugCode,
-        oauthStep: "token_request",
-      });
-
+    if (debugCode && sseUrl && authState.oauthStep === "token_request") {
       // Load client info asynchronously
       const provider = new DebugInspectorOAuthClientProvider(sseUrl);
       provider
         .clientInformation()
         .then((info) => {
-          updateState({ oauthClientInfo: info || null });
+          updateAuthState({ oauthClientInfo: info || null });
         })
         .catch((error) => {
           console.error("Failed to load client information:", error);
         });
-
-      // Now that we've processed it, clear the debug code
-      sessionStorage.removeItem(SESSION_KEYS.DEBUG_CODE);
     }
-  }, [sseUrl]);
+  }, [sseUrl, authState.oauthStep, updateAuthState]);
 
   const validateOAuthMetadata = (
     metadata: OAuthMetadata | null,
@@ -158,9 +69,9 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
     return clientInformation;
   };
 
-  const startOAuthFlow = () => {
+  const startOAuthFlow = useCallback(() => {
     if (!sseUrl) {
-      updateState({
+      updateAuthState({
         statusMessage: {
           type: "error",
           message:
@@ -170,37 +81,37 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
       return;
     }
 
-    updateState({
+    updateAuthState({
       oauthStep: "not_started",
       authorizationUrl: null,
       statusMessage: null,
       latestError: null,
     });
-  };
+  }, [sseUrl, updateAuthState]);
 
-  const proceedToNextStep = async () => {
+  const proceedToNextStep = useCallback(async () => {
     if (!sseUrl) return;
     const provider = new DebugInspectorOAuthClientProvider(sseUrl);
 
     try {
-      updateState({
+      updateAuthState({
         isInitiatingAuth: true,
         statusMessage: null,
         latestError: null,
       });
 
-      if (state.oauthStep === "not_started") {
-        updateState({ oauthStep: "metadata_discovery" });
+      if (authState.oauthStep === "not_started") {
+        updateAuthState({ oauthStep: "metadata_discovery" });
         const metadata = await discoverOAuthMetadata(sseUrl);
         if (!metadata) {
           throw new Error("Failed to discover OAuth metadata");
         }
         const parsedMetadata = await OAuthMetadataSchema.parseAsync(metadata);
-        updateState({ oauthMetadata: parsedMetadata });
-      } else if (state.oauthStep === "metadata_discovery") {
-        const metadata = validateOAuthMetadata(state.oauthMetadata);
+        updateAuthState({ oauthMetadata: parsedMetadata });
+      } else if (authState.oauthStep === "metadata_discovery") {
+        const metadata = validateOAuthMetadata(authState.oauthMetadata);
 
-        updateState({ oauthStep: "client_registration" });
+        updateAuthState({ oauthStep: "client_registration" });
 
         const clientMetadata = provider.clientMetadata;
         // Add all supported scopes to client registration.
@@ -214,11 +125,11 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
         });
 
         provider.saveClientInformation(fullInformation);
-        updateState({ oauthClientInfo: fullInformation });
-      } else if (state.oauthStep === "client_registration") {
-        const metadata = validateOAuthMetadata(state.oauthMetadata);
+        updateAuthState({ oauthClientInfo: fullInformation });
+      } else if (authState.oauthStep === "client_registration") {
+        const metadata = validateOAuthMetadata(authState.oauthMetadata);
         const clientInformation = await validateClientInformation(provider);
-        updateState({ oauthStep: "authorization_redirect" });
+        updateAuthState({ oauthStep: "authorization_redirect" });
         try {
           const { authorizationUrl, codeVerifier } = await startAuthorization(
             sseUrl,
@@ -234,55 +145,55 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
           if (metadata.scopes_supported) {
             const url = new URL(authorizationUrl.toString());
             url.searchParams.set("scope", metadata.scopes_supported.join(" "));
-            updateState({ authorizationUrl: url.toString() });
+            updateAuthState({ authorizationUrl: url.toString() });
           } else {
-            updateState({ authorizationUrl: authorizationUrl.toString() });
+            updateAuthState({ authorizationUrl: authorizationUrl.toString() });
           }
 
-          updateState({ oauthStep: "authorization_code" });
+          updateAuthState({ oauthStep: "authorization_code" });
         } catch (error) {
           console.error("OAuth flow step error:", error);
           throw new Error(
             `Failed to complete OAuth setup: ${error instanceof Error ? error.message : String(error)}`,
           );
         }
-      } else if (state.oauthStep === "authorization_code") {
-        if (!state.authorizationCode || state.authorizationCode.trim() === "") {
-          updateState({
+      } else if (authState.oauthStep === "authorization_code") {
+        if (!authState.authorizationCode || authState.authorizationCode.trim() === "") {
+          updateAuthState({
             validationError: "You need to provide an authorization code",
           });
           return;
         }
-        updateState({ validationError: null, oauthStep: "token_request" });
-      } else if (state.oauthStep === "token_request") {
+        updateAuthState({ validationError: null, oauthStep: "token_request" });
+      } else if (authState.oauthStep === "token_request") {
         const codeVerifier = provider.codeVerifier();
-        const metadata = validateOAuthMetadata(state.oauthMetadata);
+        const metadata = validateOAuthMetadata(authState.oauthMetadata);
         const clientInformation = await validateClientInformation(provider);
 
         const tokens = await exchangeAuthorization(sseUrl, {
           metadata,
           clientInformation,
-          authorizationCode: state.authorizationCode,
+          authorizationCode: authState.authorizationCode,
           codeVerifier,
           redirectUri: provider.redirectUrl,
         });
 
         provider.saveTokens(tokens);
-        updateState({ oauthTokens: tokens, oauthStep: "complete" });
+        updateAuthState({ oauthTokens: tokens, oauthStep: "complete" });
       }
     } catch (error) {
       console.error("OAuth flow error:", error);
-      updateState({
+      updateAuthState({
         latestError: error instanceof Error ? error : new Error(String(error)),
       });
     } finally {
-      updateState({ isInitiatingAuth: false });
+      updateAuthState({ isInitiatingAuth: false });
     }
-  };
+  }, [sseUrl, authState, updateAuthState]);
 
-  const handleStartOAuth = async () => {
+  const handleStartOAuth = useCallback(async () => {
     if (!sseUrl) {
-      updateState({
+      updateAuthState({
         statusMessage: {
           type: "error",
           message:
@@ -292,11 +203,11 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
       return;
     }
 
-    updateState({ isInitiatingAuth: true, statusMessage: null });
+    updateAuthState({ isInitiatingAuth: true, statusMessage: null });
     try {
       const serverAuthProvider = new DebugInspectorOAuthClientProvider(sseUrl);
       await auth(serverAuthProvider, { serverUrl: sseUrl });
-      updateState({
+      updateAuthState({
         statusMessage: {
           type: "info",
           message: "Starting OAuth authentication process...",
@@ -304,22 +215,22 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
       });
     } catch (error) {
       console.error("OAuth initialization error:", error);
-      updateState({
+      updateAuthState({
         statusMessage: {
           type: "error",
           message: `Failed to start OAuth flow: ${error instanceof Error ? error.message : String(error)}`,
         },
       });
     } finally {
-      updateState({ isInitiatingAuth: false });
+      updateAuthState({ isInitiatingAuth: false });
     }
-  };
+  }, [sseUrl, updateAuthState]);
 
-  const handleClearOAuth = () => {
+  const handleClearOAuth = useCallback(() => {
     if (sseUrl) {
       const serverAuthProvider = new DebugInspectorOAuthClientProvider(sseUrl);
       serverAuthProvider.clear();
-      updateState({
+      updateAuthState({
         oauthTokens: null,
         oauthStep: "not_started",
         latestError: null,
@@ -334,30 +245,30 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
 
       // Clear success message after 3 seconds
       setTimeout(() => {
-        updateState({ statusMessage: null });
+        updateAuthState({ statusMessage: null });
       }, 3000);
     }
-  };
+  }, [sseUrl, updateAuthState]);
 
-  const renderStatusMessage = () => {
-    if (!state.statusMessage) return null;
+  const renderStatusMessage = useCallback(() => {
+    if (!authState.statusMessage) return null;
 
     const bgColor =
-      state.statusMessage.type === "error"
+      authState.statusMessage.type === "error"
         ? "bg-red-50"
-        : state.statusMessage.type === "success"
+        : authState.statusMessage.type === "success"
           ? "bg-green-50"
           : "bg-blue-50";
     const textColor =
-      state.statusMessage.type === "error"
+      authState.statusMessage.type === "error"
         ? "text-red-700"
-        : state.statusMessage.type === "success"
+        : authState.statusMessage.type === "success"
           ? "text-green-700"
           : "text-blue-700";
     const borderColor =
-      state.statusMessage.type === "error"
+      authState.statusMessage.type === "error"
         ? "border-red-200"
-        : state.statusMessage.type === "success"
+        : authState.statusMessage.type === "success"
           ? "border-green-200"
           : "border-blue-200";
 
@@ -367,13 +278,13 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
       >
         <div className="flex items-center gap-2">
           <AlertCircle className="h-4 w-4" />
-          <p className="text-sm">{state.statusMessage.message}</p>
+          <p className="text-sm">{authState.statusMessage.message}</p>
         </div>
       </div>
     );
-  };
+  }, [authState.statusMessage]);
 
-  const renderOAuthFlow = () => {
+  const renderOAuthFlow = useCallback(() => {
     const steps = [
       {
         key: "not_started",
@@ -383,14 +294,14 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
       {
         key: "metadata_discovery",
         label: "Metadata Discovery",
-        metadata: state.oauthMetadata && (
+        metadata: authState.oauthMetadata && (
           <details className="text-xs mt-2">
             <summary className="cursor-pointer text-muted-foreground font-medium">
               Retrieved OAuth Metadata from {sseUrl}
               /.well-known/oauth-authorization-server
             </summary>
             <pre className="mt-2 p-2 bg-muted rounded-md overflow-auto max-h-[300px]">
-              {JSON.stringify(state.oauthMetadata, null, 2)}
+              {JSON.stringify(authState.oauthMetadata, null, 2)}
             </pre>
           </details>
         ),
@@ -398,13 +309,13 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
       {
         key: "client_registration",
         label: "Client Registration",
-        metadata: state.oauthClientInfo && (
+        metadata: authState.oauthClientInfo && (
           <details className="text-xs mt-2">
             <summary className="cursor-pointer text-muted-foreground font-medium">
               Registered Client Information
             </summary>
             <pre className="mt-2 p-2 bg-muted rounded-md overflow-auto max-h-[300px]">
-              {JSON.stringify(state.oauthClientInfo, null, 2)}
+              {JSON.stringify(authState.oauthClientInfo, null, 2)}
             </pre>
           </details>
         ),
@@ -412,13 +323,13 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
       {
         key: "authorization_redirect",
         label: "Preparing Authorization",
-        metadata: state.authorizationUrl && (
+        metadata: authState.authorizationUrl && (
           <div className="mt-2 p-3 border rounded-md bg-muted">
             <p className="font-medium mb-2 text-sm">Authorization URL:</p>
             <div className="flex items-center gap-2">
-              <p className="text-xs break-all">{state.authorizationUrl}</p>
+              <p className="text-xs break-all">{authState.authorizationUrl}</p>
               <a
-                href={state.authorizationUrl}
+                href={authState.authorizationUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center text-blue-500 hover:text-blue-700"
@@ -449,22 +360,22 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
             <div className="flex gap-2">
               <input
                 id="authCode"
-                value={state.authorizationCode}
+                value={authState.authorizationCode}
                 onChange={(e) => {
-                  updateState({
+                  updateAuthState({
                     authorizationCode: e.target.value,
                     validationError: null,
                   });
                 }}
                 placeholder="Enter the code from the authorization server"
                 className={`flex h-9 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                  state.validationError ? "border-red-500" : "border-input"
+                  authState.validationError ? "border-red-500" : "border-input"
                 }`}
               />
             </div>
-            {state.validationError && (
+            {authState.validationError && (
               <p className="text-xs text-red-600 mt-1">
-                {state.validationError}
+                {authState.validationError}
               </p>
             )}
             <p className="text-xs text-muted-foreground mt-1">
@@ -477,7 +388,7 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
       {
         key: "token_request",
         label: "Token Request",
-        metadata: state.oauthMetadata && (
+        metadata: authState.oauthMetadata && (
           <details className="text-xs mt-2">
             <summary className="cursor-pointer text-muted-foreground font-medium">
               Token Request Details
@@ -485,7 +396,7 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
             <div className="mt-2 p-2 bg-muted rounded-md">
               <p className="font-medium">Token Endpoint:</p>
               <code className="block mt-1 text-xs overflow-x-auto">
-                {state.oauthMetadata.token_endpoint}
+                {authState.oauthMetadata.token_endpoint}
               </code>
             </div>
           </details>
@@ -494,7 +405,7 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
       {
         key: "complete",
         label: "Authentication Complete",
-        metadata: state.oauthTokens && (
+        metadata: authState.oauthTokens && (
           <details className="text-xs mt-2">
             <summary className="cursor-pointer text-muted-foreground font-medium">
               Access Tokens
@@ -505,7 +416,7 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
               requests.
             </p>
             <pre className="mt-2 p-2 bg-muted rounded-md overflow-auto max-h-[300px]">
-              {JSON.stringify(state.oauthTokens, null, 2)}
+              {JSON.stringify(authState.oauthTokens, null, 2)}
             </pre>
           </details>
         ),
@@ -522,10 +433,10 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
         <div className="space-y-3">
           {steps.map((step, idx) => {
             const currentStepIdx = steps.findIndex(
-              (s) => s.key === state.oauthStep,
+              (s) => s.key === authState.oauthStep,
             );
             const isComplete = idx <= currentStepIdx;
-            const isCurrent = step.key === state.oauthStep;
+            const isCurrent = step.key === authState.oauthStep;
 
             return (
               <div key={step.key}>
@@ -548,11 +459,11 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
                 )}
 
                 {/* Display error if current step and an error exists */}
-                {isCurrent && state.latestError && (
+                {isCurrent && authState.latestError && (
                   <div className="ml-7 mt-2 p-3 border border-red-300 bg-red-50 rounded-md">
                     <p className="text-sm font-medium text-red-700">Error:</p>
                     <p className="text-xs text-red-600 mt-1">
-                      {state.latestError.message}
+                      {authState.latestError.message}
                     </p>
                   </div>
                 )}
@@ -562,25 +473,25 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
         </div>
 
         <div className="flex gap-3 mt-4">
-          {state.oauthStep !== "complete" && (
+          {authState.oauthStep !== "complete" && (
             <Button
               onClick={proceedToNextStep}
-              disabled={state.isInitiatingAuth}
+              disabled={authState.isInitiatingAuth}
             >
-              {state.isInitiatingAuth
+              {authState.isInitiatingAuth
                 ? "Processing..."
-                : state.oauthStep === "authorization_redirect" &&
-                    state.authorizationUrl
+                : authState.oauthStep === "authorization_redirect" &&
+                    authState.authorizationUrl
                   ? "Open Authorization URL"
                   : "Continue"}
             </Button>
           )}
 
-          {state.oauthStep === "authorization_redirect" &&
-            state.authorizationUrl && (
+          {authState.oauthStep === "authorization_redirect" &&
+            authState.authorizationUrl && (
               <Button
                 variant="outline"
-                onClick={() => window.open(state.authorizationUrl!, "_blank")}
+                onClick={() => window.open(authState.authorizationUrl!, "_blank")}
               >
                 Open in New Tab
               </Button>
@@ -588,7 +499,7 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
         </div>
       </div>
     );
-  };
+  }, [authState, sseUrl]);
 
   return (
     <div className="w-full p-4">
@@ -614,15 +525,15 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
 
               {renderStatusMessage()}
 
-              {state.loading ? (
+              {authState.loading ? (
                 <p>Loading authentication status...</p>
               ) : (
                 <div className="space-y-4">
-                  {state.oauthTokens && (
+                  {authState.oauthTokens && (
                     <div className="space-y-2">
                       <p className="text-sm font-medium">Access Token:</p>
                       <div className="bg-muted p-2 rounded-md text-xs overflow-x-auto">
-                        {state.oauthTokens.access_token.substring(0, 25)}...
+                        {authState.oauthTokens.access_token.substring(0, 25)}...
                       </div>
                     </div>
                   )}
@@ -631,20 +542,20 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
                     <Button
                       variant="outline"
                       onClick={startOAuthFlow}
-                      disabled={state.isInitiatingAuth}
+                      disabled={authState.isInitiatingAuth}
                     >
-                      {state.oauthTokens
+                      {authState.oauthTokens
                         ? "Guided Token Refresh"
                         : "Guided OAuth Flow"}
                     </Button>
 
                     <Button
                       onClick={handleStartOAuth}
-                      disabled={state.isInitiatingAuth}
+                      disabled={authState.isInitiatingAuth}
                     >
-                      {state.isInitiatingAuth
+                      {authState.isInitiatingAuth
                         ? "Initiating..."
-                        : state.oauthTokens
+                        : authState.oauthTokens
                           ? "Quick Refresh"
                           : "Quick OAuth Flow"}
                     </Button>

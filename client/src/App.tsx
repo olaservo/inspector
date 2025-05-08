@@ -17,6 +17,9 @@ import {
   Tool,
   LoggingLevel,
 } from "@modelcontextprotocol/sdk/types.js";
+import { OAuthTokensSchema } from "@modelcontextprotocol/sdk/shared/auth.js";
+import { SESSION_KEYS, getServerSpecificKey } from "./lib/constants";
+import { AuthDebuggerState } from "./lib/auth-types";
 import React, {
   Suspense,
   useCallback,
@@ -139,6 +142,26 @@ const App = () => {
     >
   >([]);
   const [isAuthDebuggerVisible, setIsAuthDebuggerVisible] = useState(false);
+  
+  // Auth debugger state (moved from AuthDebugger component)
+  const [authState, setAuthState] = useState<AuthDebuggerState>({
+    isInitiatingAuth: false,
+    oauthTokens: null,
+    loading: true,
+    oauthStep: "not_started",
+    oauthMetadata: null,
+    oauthClientInfo: null,
+    authorizationUrl: null,
+    authorizationCode: "",
+    latestError: null,
+    statusMessage: null,
+    validationError: null,
+  });
+
+  // Helper function to update specific auth state properties
+  const updateAuthState = (updates: Partial<AuthDebuggerState>) => {
+    setAuthState((prev) => ({ ...prev, ...updates }));
+  };
   const nextRequestId = useRef(0);
   const rootsRef = useRef<Root[]>([]);
 
@@ -245,6 +268,47 @@ const App = () => {
   const onOAuthDebugConnect = useCallback(() => {
     setIsAuthDebuggerVisible(true);
   }, []);
+
+  // Load OAuth tokens when sseUrl changes (moved from AuthDebugger)
+  useEffect(() => {
+    const loadOAuthTokens = async () => {
+      try {
+        if (sseUrl) {
+          const key = getServerSpecificKey(SESSION_KEYS.TOKENS, sseUrl);
+          const tokens = sessionStorage.getItem(key);
+          if (tokens) {
+            const parsedTokens = await OAuthTokensSchema.parseAsync(
+              JSON.parse(tokens),
+            );
+            updateAuthState({
+              oauthTokens: parsedTokens,
+              oauthStep: "complete",
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error loading OAuth tokens:", error);
+      } finally {
+        updateAuthState({ loading: false });
+      }
+    };
+
+    loadOAuthTokens();
+  }, [sseUrl]);
+
+  // Check for debug callback code (moved from AuthDebugger)
+  useEffect(() => {
+    const debugCode = sessionStorage.getItem(SESSION_KEYS.DEBUG_CODE);
+    if (debugCode && sseUrl) {
+      updateAuthState({
+        authorizationCode: debugCode,
+        oauthStep: "token_request",
+      });
+
+      // Now that we've processed it, clear the debug code
+      sessionStorage.removeItem(SESSION_KEYS.DEBUG_CODE);
+    }
+  }, [sseUrl]);
 
   useEffect(() => {
     fetch(`${getMCPProxyAddress(config)}/config`)
@@ -485,6 +549,8 @@ const App = () => {
       <AuthDebugger
         sseUrl={sseUrl}
         onBack={() => setIsAuthDebuggerVisible(false)}
+        authState={authState}
+        updateAuthState={updateAuthState}
       />
     </Suspense>
   );
