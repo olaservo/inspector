@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import { InspectorOAuthClientProvider } from "../lib/auth";
 import {
   auth,
@@ -18,10 +17,7 @@ import {
   OAuthClientInformation,
   OAuthTokens,
 } from "@modelcontextprotocol/sdk/shared/auth.js";
-import { CheckCircle2, Circle, ExternalLink } from "lucide-react";
-
-// Type for the toast function from the useToast hook
-type ToastFunction = ReturnType<typeof useToast>["toast"];
+import { CheckCircle2, Circle, ExternalLink, AlertCircle } from "lucide-react";
 
 interface AuthDebuggerProps {
   sseUrl: string;
@@ -38,6 +34,14 @@ type OAuthStep =
   | "token_request"
   | "complete";
 
+// Message types for inline feedback
+type MessageType = "success" | "error" | "info";
+
+interface StatusMessage {
+  type: MessageType;
+  message: string;
+}
+
 // Enhanced version of the OAuth client provider specifically for debug flows
 class DebugInspectorOAuthClientProvider extends InspectorOAuthClientProvider {
   get redirectUrl(): string {
@@ -45,40 +49,7 @@ class DebugInspectorOAuthClientProvider extends InspectorOAuthClientProvider {
   }
 }
 
-const validateOAuthMetadata = (
-  metadata: OAuthMetadata | null,
-  toast: ToastFunction,
-): OAuthMetadata => {
-  if (!metadata) {
-    toast({
-      title: "Error",
-      description: "Can't advance without successfully fetching metadata",
-      variant: "destructive",
-    });
-    throw new Error("OAuth metadata not found");
-  }
-  return metadata;
-};
-
-const validateClientInformation = async (
-  provider: DebugInspectorOAuthClientProvider,
-  toast: ToastFunction,
-): Promise<OAuthClientInformation> => {
-  const clientInformation = await provider.clientInformation();
-
-  if (!clientInformation) {
-    toast({
-      title: "Error",
-      description: "Can't advance without successful client registration",
-      variant: "destructive",
-    });
-    throw new Error("OAuth client information not found");
-  }
-  return clientInformation;
-};
-
 const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
-  const { toast } = useToast();
   const [isInitiatingAuth, setIsInitiatingAuth] = useState(false);
   const [oauthTokens, setOAuthTokens] = useState<OAuthTokens | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,9 +61,15 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
     OAuthClientInformationFull | OAuthClientInformation | null
   >(null);
   const [authorizationUrl, setAuthorizationUrl] = useState<string | null>(null);
-  const [oauthFlowVisible, setOAuthFlowVisible] = useState(false);
   const [authorizationCode, setAuthorizationCode] = useState<string>("");
   const [latestError, setLatestError] = useState<Error | null>(null);
+
+  // Status messages for inline display
+  const [statusMessage, setStatusMessage] = useState<StatusMessage | null>(
+    null,
+  );
+  const [validationError, setValidationError] = useState<string | null>(null);
+
   // Load OAuth tokens on component mount
   useEffect(() => {
     const loadOAuthTokens = async () => {
@@ -116,7 +93,7 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
     };
 
     loadOAuthTokens();
-  }, [sseUrl]); // Check for debug callback code
+  }, [sseUrl]);
 
   // Check for debug callback code and load client info
   useEffect(() => {
@@ -124,7 +101,6 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
     if (debugCode && sseUrl) {
       // We've returned from a debug OAuth callback with a code
       setAuthorizationCode(debugCode);
-      setOAuthFlowVisible(true);
       setOAuthStep("token_request");
 
       // Load client info asynchronously
@@ -143,20 +119,40 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
     }
   }, [sseUrl]);
 
+  const validateOAuthMetadata = (
+    metadata: OAuthMetadata | null,
+  ): OAuthMetadata => {
+    if (!metadata) {
+      throw new Error("Can't advance without successfully fetching metadata");
+    }
+    return metadata;
+  };
+
+  const validateClientInformation = async (
+    provider: DebugInspectorOAuthClientProvider,
+  ): Promise<OAuthClientInformation> => {
+    const clientInformation = await provider.clientInformation();
+
+    if (!clientInformation) {
+      throw new Error("Can't advance without successful client registration");
+    }
+    return clientInformation;
+  };
+
   const startOAuthFlow = () => {
     if (!sseUrl) {
-      toast({
-        title: "Error",
-        description:
+      setStatusMessage({
+        type: "error",
+        message:
           "Please enter a server URL in the sidebar before authenticating",
-        variant: "destructive",
       });
       return;
     }
 
-    setOAuthFlowVisible(true);
     setOAuthStep("not_started");
     setAuthorizationUrl(null);
+    setStatusMessage(null);
+    setLatestError(null);
   };
 
   const proceedToNextStep = async () => {
@@ -165,31 +161,25 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
 
     try {
       setIsInitiatingAuth(true);
+      setStatusMessage(null);
+      setLatestError(null);
 
       if (oauthStep === "not_started") {
         setOAuthStep("metadata_discovery");
         const metadata = await discoverOAuthMetadata(sseUrl);
         if (!metadata) {
-          toast({
-            title: "Error",
-            description: "Failed to discover OAuth metadata",
-            variant: "destructive",
-          });
-          return;
+          throw new Error("Failed to discover OAuth metadata");
         }
         const parsedMetadata = await OAuthMetadataSchema.parseAsync(metadata);
         setOAuthMetadata(parsedMetadata);
       } else if (oauthStep === "metadata_discovery") {
-        const metadata = validateOAuthMetadata(oauthMetadata, toast);
+        const metadata = validateOAuthMetadata(oauthMetadata);
 
         setOAuthStep("client_registration");
 
         const clientMetadata = provider.clientMetadata;
         // Add all supported scopes to client registration.
-        // This is the maximal set of scopes the client can request, the
-        // scope of the actual token is specified below
         if (metadata.scopes_supported) {
-          // TODO: add this to schema
           clientMetadata["scope"] = metadata.scopes_supported.join(" ");
         }
 
@@ -199,14 +189,10 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
         });
 
         provider.saveClientInformation(fullInformation);
-        // save it here to be more convenient for display
         setOAuthClientInfo(fullInformation);
       } else if (oauthStep === "client_registration") {
-        const metadata = validateOAuthMetadata(oauthMetadata, toast);
-        const clientInformation = await validateClientInformation(
-          provider,
-          toast,
-        );
+        const metadata = validateOAuthMetadata(oauthMetadata);
+        const clientInformation = await validateClientInformation(provider);
         setOAuthStep("authorization_redirect");
         try {
           const { authorizationUrl, codeVerifier } = await startAuthorization(
@@ -215,17 +201,12 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
               metadata,
               clientInformation,
               redirectUrl: provider.redirectUrl,
-              // TODO: fix this once SDK PR is merged
-              // scope: metadata.scopes_supported,
             },
           );
 
           provider.saveCodeVerifier(codeVerifier);
 
-          // TODO: remove this once scope is valid parameter above
-          // Modify the authorization URL to include all supported scopes
           if (metadata.scopes_supported) {
-            //Add all supported scopes to the authorization URL
             const url = new URL(authorizationUrl.toString());
             url.searchParams.set("scope", metadata.scopes_supported.join(" "));
             setAuthorizationUrl(url.toString());
@@ -236,30 +217,21 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
           setOAuthStep("authorization_code");
         } catch (error) {
           console.error("OAuth flow step error:", error);
-          toast({
-            title: "OAuth Setup Error",
-            description: `Failed to complete OAuth setup: ${error instanceof Error ? error.message : String(error)}`,
-            variant: "destructive",
-          });
+          throw new Error(
+            `Failed to complete OAuth setup: ${error instanceof Error ? error.message : String(error)}`,
+          );
         }
       } else if (oauthStep === "authorization_code") {
         if (!authorizationCode || authorizationCode.trim() === "") {
-          toast({
-            title: "Error",
-            description: "You need to provide an authorization code",
-            variant: "destructive",
-          });
+          setValidationError("You need to provide an authorization code");
           return;
         }
-        // We have a code, continue to token request
+        setValidationError(null);
         setOAuthStep("token_request");
       } else if (oauthStep === "token_request") {
         const codeVerifier = provider.codeVerifier();
-        const metadata = validateOAuthMetadata(oauthMetadata, toast);
-        const clientInformation = await validateClientInformation(
-          provider,
-          toast,
-        );
+        const metadata = validateOAuthMetadata(oauthMetadata);
+        const clientInformation = await validateClientInformation(provider);
 
         const tokens = await exchangeAuthorization(sseUrl, {
           metadata,
@@ -276,12 +248,6 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
     } catch (error) {
       console.error("OAuth flow error:", error);
       setLatestError(error instanceof Error ? error : new Error(String(error)));
-
-      toast({
-        title: "OAuth Flow Error",
-        description: `Error in OAuth flow: ${error instanceof Error ? error.message : String(error)}`,
-        variant: "destructive",
-      });
     } finally {
       setIsInitiatingAuth(false);
     }
@@ -289,34 +255,28 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
 
   const handleStartOAuth = async () => {
     if (!sseUrl) {
-      toast({
-        title: "Error",
-        description:
+      setStatusMessage({
+        type: "error",
+        message:
           "Please enter a server URL in the sidebar before authenticating",
-        variant: "destructive",
       });
       return;
     }
 
     setIsInitiatingAuth(true);
+    setStatusMessage(null);
     try {
-      // Create an auth provider with the current server URL
       const serverAuthProvider = new DebugInspectorOAuthClientProvider(sseUrl);
-
-      // Start the OAuth flow with immediate redirect
       await auth(serverAuthProvider, { serverUrl: sseUrl });
-
-      // This code may not run if redirected to OAuth provider
-      toast({
-        title: "Authenticating",
-        description: "Starting OAuth authentication process...",
+      setStatusMessage({
+        type: "info",
+        message: "Starting OAuth authentication process...",
       });
     } catch (error) {
       console.error("OAuth initialization error:", error);
-      toast({
-        title: "OAuth Error",
-        description: `Failed to start OAuth flow: ${error instanceof Error ? error.message : String(error)}`,
-        variant: "destructive",
+      setStatusMessage({
+        type: "error",
+        message: `Failed to start OAuth flow: ${error instanceof Error ? error.message : String(error)}`,
       });
     } finally {
       setIsInitiatingAuth(false);
@@ -329,15 +289,54 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
       serverAuthProvider.clear();
       setOAuthTokens(null);
       setOAuthStep("not_started");
-      setOAuthFlowVisible(false);
       setLatestError(null);
       setOAuthClientInfo(null);
       setAuthorizationCode("");
-      toast({
-        title: "Success",
-        description: "OAuth tokens cleared successfully",
+      setValidationError(null);
+      setStatusMessage({
+        type: "success",
+        message: "OAuth tokens cleared successfully",
       });
+
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setStatusMessage(null);
+      }, 3000);
     }
+  };
+
+  const renderStatusMessage = () => {
+    if (!statusMessage) return null;
+
+    const bgColor =
+      statusMessage.type === "error"
+        ? "bg-red-50"
+        : statusMessage.type === "success"
+          ? "bg-green-50"
+          : "bg-blue-50";
+    const textColor =
+      statusMessage.type === "error"
+        ? "text-red-700"
+        : statusMessage.type === "success"
+          ? "text-green-700"
+          : "text-blue-700";
+    const borderColor =
+      statusMessage.type === "error"
+        ? "border-red-200"
+        : statusMessage.type === "success"
+          ? "border-green-200"
+          : "border-blue-200";
+
+    return (
+      <div
+        className={`p-3 rounded-md border ${bgColor} ${borderColor} ${textColor} mb-4`}
+      >
+        <div className="flex items-center gap-2">
+          <AlertCircle className="h-4 w-4" />
+          <p className="text-sm">{statusMessage.message}</p>
+        </div>
+      </div>
+    );
   };
 
   const renderOAuthFlow = () => {
@@ -365,7 +364,7 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
       {
         key: "client_registration",
         label: "Client Registration",
-        metadata: (
+        metadata: oauthClientInfo && (
           <details className="text-xs mt-2">
             <summary className="cursor-pointer text-muted-foreground font-medium">
               Registered Client Information
@@ -417,11 +416,19 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
               <input
                 id="authCode"
                 value={authorizationCode}
-                onChange={(e) => setAuthorizationCode(e.target.value)}
+                onChange={(e) => {
+                  setAuthorizationCode(e.target.value);
+                  setValidationError(null);
+                }}
                 placeholder="Enter the code from the authorization server"
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className={`flex h-9 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                  validationError ? "border-red-500" : "border-input"
+                }`}
               />
             </div>
+            {validationError && (
+              <p className="text-xs text-red-600 mt-1">{validationError}</p>
+            )}
             <p className="text-xs text-muted-foreground mt-1">
               Once you've completed authorization in the link, paste the code
               here.
@@ -442,7 +449,6 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
               <code className="block mt-1 text-xs overflow-x-auto">
                 {oauthMetadata.token_endpoint}
               </code>
-              {/* TODO: break down the URL components */}
             </div>
           </details>
         ),
@@ -534,16 +540,6 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
               Open in New Tab
             </Button>
           )}
-
-          <Button
-            variant="outline"
-            onClick={() => {
-              setOAuthFlowVisible(false);
-              setOAuthStep("not_started");
-            }}
-          >
-            Close Flow
-          </Button>
         </div>
       </div>
     );
@@ -570,6 +566,8 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
               <p className="text-sm text-muted-foreground mb-2">
                 Use OAuth to securely authenticate with the MCP server.
               </p>
+
+              {renderStatusMessage()}
 
               {loading ? (
                 <p>Loading authentication status...</p>
@@ -619,7 +617,7 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
               )}
             </div>
 
-            {oauthFlowVisible && renderOAuthFlow()}
+            {renderOAuthFlow()}
           </div>
         </div>
       </div>

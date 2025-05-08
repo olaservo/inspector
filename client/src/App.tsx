@@ -490,11 +490,15 @@ const App = () => {
   );
 
   // Helper function to render OAuth callback components
-  const renderOAuthCallback = (path: string, onConnect: (serverUrl: string) => void) => {
-    const Component = path === "/oauth/callback" 
-      ? React.lazy(() => import("./components/OAuthCallback"))
-      : React.lazy(() => import("./components/OAuthDebugCallback"));
-    
+  const renderOAuthCallback = (
+    path: string,
+    onConnect: (serverUrl: string) => void,
+  ) => {
+    const Component =
+      path === "/oauth/callback"
+        ? React.lazy(() => import("./components/OAuthCallback"))
+        : React.lazy(() => import("./components/OAuthDebugCallback"));
+
     return (
       <Suspense fallback={<div>Loading...</div>}>
         <Component onConnect={onConnect} />
