@@ -144,7 +144,7 @@ const App = () => {
   >([]);
   const [isAuthDebuggerVisible, setIsAuthDebuggerVisible] = useState(false);
 
-  // Auth debugger state (moved from AuthDebugger component)
+  // Auth debugger state
   const [authState, setAuthState] = useState<AuthDebuggerState>({
     isInitiatingAuth: false,
     oauthTokens: null,
