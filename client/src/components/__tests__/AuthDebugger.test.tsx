@@ -33,14 +33,6 @@ const mockOAuthClientInfo = {
   redirect_uris: ["http://localhost:3000/oauth/callback/debug"],
 };
 
-// Mock the toast hook
-const mockToast = jest.fn();
-jest.mock("@/hooks/use-toast", () => ({
-  useToast: () => ({
-    toast: mockToast,
-  }),
-}));
-
 // Mock MCP SDK functions - must be before imports
 jest.mock("@modelcontextprotocol/sdk/client/auth.js", () => ({
   auth: jest.fn(),
