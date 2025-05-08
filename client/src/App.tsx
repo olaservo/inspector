@@ -266,14 +266,25 @@ const App = () => {
     [connectMcpServer],
   );
 
-  // Auto-connect to previously saved serverURL after OAuth callback
+  // Update OAuth debug state during debug callback
   const onOAuthDebugConnect = useCallback(
-    (_serverUrl: string, authorizationCode?: string) => {
+    ({
+      authorizationCode,
+      errorMsg,
+    }: {
+      authorizationCode?: string;
+      errorMsg?: string;
+    }) => {
       setIsAuthDebuggerVisible(true);
       if (authorizationCode) {
         updateAuthState({
           authorizationCode,
           oauthStep: "token_request",
+        });
+      }
+      if (errorMsg) {
+        updateAuthState({
+          latestError: new Error(errorMsg),
         });
       }
     },
@@ -553,28 +564,26 @@ const App = () => {
   );
 
   // Helper function to render OAuth callback components
-  const renderOAuthCallback = (
-    path: string,
-    onConnect: (serverUrl: string, authorizationCode?: string) => void,
-  ) => {
-    const Component =
-      path === "/oauth/callback"
-        ? React.lazy(() => import("./components/OAuthCallback"))
-        : React.lazy(() => import("./components/OAuthDebugCallback"));
-
+  if (window.location.pathname === "/oauth/callback") {
+    const OAuthCallback = React.lazy(
+      () => import("./components/OAuthCallback"),
+    );
     return (
       <Suspense fallback={<div>Loading...</div>}>
-        <Component onConnect={onConnect} />
+        <OAuthCallback onConnect={onOAuthConnect} />
       </Suspense>
     );
-  };
-
-  if (window.location.pathname === "/oauth/callback") {
-    return renderOAuthCallback(window.location.pathname, onOAuthConnect);
   }
 
   if (window.location.pathname === "/oauth/callback/debug") {
-    return renderOAuthCallback(window.location.pathname, onOAuthDebugConnect);
+    const OAuthDebugCallback = React.lazy(
+      () => import("./components/OAuthDebugCallback"),
+    );
+    return (
+      <Suspense fallback={<div>Loading...</div>}>
+        <OAuthDebugCallback onConnect={onOAuthDebugConnect} />
+      </Suspense>
+    );
   }
 
   return (

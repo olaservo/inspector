@@ -1,18 +1,21 @@
 import { useEffect } from "react";
 import { SESSION_KEYS } from "../lib/constants";
-import { useToast } from "@/hooks/use-toast.ts";
 import {
   generateOAuthErrorDescription,
   parseOAuthCallbackParams,
 } from "@/utils/oauthUtils.ts";
 
 interface OAuthCallbackProps {
-  onConnect: (serverUrl: string, authorizationCode?: string) => void;
+  onConnect: ({
+    authorizationCode,
+    errorMsg,
+  }: {
+    authorizationCode?: string;
+    errorMsg?: string;
+  }) => void;
 }
 
 const OAuthDebugCallback = ({ onConnect }: OAuthCallbackProps) => {
-  const { toast } = useToast();
-
   useEffect(() => {
     let isProcessed = false;
 
@@ -23,16 +26,11 @@ const OAuthDebugCallback = ({ onConnect }: OAuthCallbackProps) => {
       }
       isProcessed = true;
 
-      const notifyError = (description: string) =>
-        void toast({
-          title: "OAuth Authorization Error",
-          description,
-          variant: "destructive",
-        });
-
       const params = parseOAuthCallbackParams(window.location.search);
       if (!params.successful) {
-        return notifyError(generateOAuthErrorDescription(params));
+        const errorMsg = generateOAuthErrorDescription(params);
+        onConnect({ errorMsg });
+        return;
       }
 
       const serverUrl = sessionStorage.getItem(SESSION_KEYS.SERVER_URL);
@@ -47,20 +45,13 @@ const OAuthDebugCallback = ({ onConnect }: OAuthCallbackProps) => {
       }
 
       if (!params.code) {
-        return notifyError("Missing authorization code");
+        onConnect({ errorMsg: "Missing authorization code" });
+        return;
       }
 
       // Instead of storing in sessionStorage, pass the code directly
       // to the auth state manager through onConnect
-      onConnect(serverUrl, params.code);
-
-      // Show success message
-      toast({
-        title: "Success",
-        description:
-          "Authorization code received. Returning to the Auth Debugger.",
-        variant: "default",
-      });
+      onConnect({ authorizationCode: params.code });
     };
 
     handleCallback().finally(() => {
@@ -74,7 +65,7 @@ const OAuthDebugCallback = ({ onConnect }: OAuthCallbackProps) => {
     return () => {
       isProcessed = true;
     };
-  }, [toast, onConnect]);
+  }, [onConnect]);
 
   const callbackParams = parseOAuthCallbackParams(window.location.search);
 
