@@ -31,7 +31,7 @@ import { useConnection } from "./lib/hooks/useConnection";
 import { useDraggablePane } from "./lib/hooks/useDraggablePane";
 import { StdErrNotification } from "./lib/notificationTypes";
 
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
   Bell,
@@ -39,12 +39,13 @@ import {
   FolderTree,
   Hammer,
   Hash,
+  Key,
   MessageSquare,
 } from "lucide-react";
 
 import { z } from "zod";
 import "./App.css";
-const AuthDebugger = React.lazy(() => import("./components/AuthDebugger"));
+import AuthDebugger from "./components/AuthDebugger";
 import ConsoleTab from "./components/ConsoleTab";
 import HistoryAndNotifications from "./components/History";
 import PingTab from "./components/PingTab";
@@ -259,21 +260,25 @@ const App = () => {
     (serverUrl: string) => {
       setSseUrl(serverUrl);
       setTransportType("sse");
+      setIsAuthDebuggerVisible(false);
       void connectMcpServer();
     },
     [connectMcpServer],
   );
 
   // Auto-connect to previously saved serverURL after OAuth callback
-  const onOAuthDebugConnect = useCallback((serverUrl: string, authorizationCode?: string) => {
-    setIsAuthDebuggerVisible(true);
-    if (authorizationCode) {
-      updateAuthState({
-        authorizationCode,
-        oauthStep: "token_request",
-      });
-    }
-  }, []);
+  const onOAuthDebugConnect = useCallback(
+    (serverUrl: string, authorizationCode?: string) => {
+      setIsAuthDebuggerVisible(true);
+      if (authorizationCode) {
+        updateAuthState({
+          authorizationCode,
+          oauthStep: "token_request",
+        });
+      }
+    },
+    [],
+  );
 
   // Load OAuth tokens when sseUrl changes
   useEffect(() => {
@@ -537,14 +542,14 @@ const App = () => {
 
   // Helper component for rendering the AuthDebugger
   const AuthDebuggerWrapper = () => (
-    <Suspense fallback={<div>Loading...</div>}>
+    <TabsContent value="auth">
       <AuthDebugger
         sseUrl={sseUrl}
         onBack={() => setIsAuthDebuggerVisible(false)}
         authState={authState}
         updateAuthState={updateAuthState}
       />
-    </Suspense>
+    </TabsContent>
   );
 
   // Helper function to render OAuth callback components
@@ -658,6 +663,10 @@ const App = () => {
                 <TabsTrigger value="roots">
                   <FolderTree className="w-4 h-4 mr-2" />
                   Roots
+                </TabsTrigger>
+                <TabsTrigger value="auth">
+                  <Key className="w-4 h-4 mr-2" />
+                  Auth
                 </TabsTrigger>
               </TabsList>
 
@@ -796,7 +805,13 @@ const App = () => {
               </div>
             </Tabs>
           ) : isAuthDebuggerVisible ? (
-            <AuthDebuggerWrapper />
+            <Tabs
+              defaultValue={"auth"}
+              className="w-full p-4"
+              onValueChange={(value) => (window.location.hash = value)}
+            >
+              <AuthDebuggerWrapper />
+            </Tabs>
           ) : (
             <div className="flex flex-col items-center justify-center h-full gap-4">
               <p className="text-lg text-gray-500">
