@@ -8,7 +8,6 @@ import {
   startAuthorization,
   exchangeAuthorization,
 } from "@modelcontextprotocol/sdk/client/auth.js";
-import { SESSION_KEYS } from "../lib/constants";
 import {
   OAuthMetadataSchema,
   OAuthMetadata,
@@ -16,6 +15,7 @@ import {
 } from "@modelcontextprotocol/sdk/shared/auth.js";
 import { CheckCircle2, Circle, ExternalLink, AlertCircle } from "lucide-react";
 import { AuthDebuggerState } from "../lib/auth-types";
+import { SESSION_KEYS, getServerSpecificKey } from "../lib/constants";
 
 interface AuthDebuggerProps {
   sseUrl: string;
@@ -24,38 +24,58 @@ interface AuthDebuggerProps {
   updateAuthState: (updates: Partial<AuthDebuggerState>) => void;
 }
 
-// Enhanced version of the OAuth client provider specifically for debug flows
+// Overrides debug URL and allows saving server OAuth metadata to
+// display in debug UI.
 class DebugInspectorOAuthClientProvider extends InspectorOAuthClientProvider {
   get redirectUrl(): string {
     return `${window.location.origin}/oauth/callback/debug`;
   }
+
+  saveServerMetadata(metadata: OAuthMetadata) {
+    const key = getServerSpecificKey(
+      SESSION_KEYS.SERVER_METADATA,
+      this.serverUrl,
+    );
+    sessionStorage.setItem(key, JSON.stringify(metadata));
+  }
+
+  getServerMetadata(): OAuthMetadata | null {
+    const key = getServerSpecificKey(
+      SESSION_KEYS.SERVER_METADATA,
+      this.serverUrl,
+    );
+    const metadata = sessionStorage.getItem(key);
+    if (!metadata) {
+      return null;
+    }
+    return JSON.parse(metadata);
+  }
 }
 
-const AuthDebugger = ({ sseUrl, onBack, authState, updateAuthState }: AuthDebuggerProps) => {
-  // Load client info asynchronously when we have a debug code
-  useEffect(() => {
-    const debugCode = sessionStorage.getItem(SESSION_KEYS.DEBUG_CODE);
-    if (debugCode && sseUrl && authState.oauthStep === "token_request") {
-      // Load client info asynchronously
-      const provider = new DebugInspectorOAuthClientProvider(sseUrl);
-      provider
-        .clientInformation()
-        .then((info) => {
-          updateAuthState({ oauthClientInfo: info || null });
-        })
-        .catch((error) => {
-          console.error("Failed to load client information:", error);
-        });
-    }
-  }, [sseUrl, authState.oauthStep, updateAuthState]);
+const AuthDebugger = ({
+  sseUrl,
+  onBack,
+  authState,
+  updateAuthState,
+}: AuthDebuggerProps) => {
+  // Load client info asynchronously when we're at the token_request step
 
-  const validateOAuthMetadata = (
-    metadata: OAuthMetadata | null,
-  ): OAuthMetadata => {
-    if (!metadata) {
-      throw new Error("Can't advance without successfully fetching metadata");
+  const validateOAuthMetadata = async (
+    provider: DebugInspectorOAuthClientProvider,
+  ): Promise<OAuthMetadata> => {
+    const metadata = provider.getServerMetadata();
+    if (metadata) {
+      return metadata;
     }
-    return metadata;
+
+    const fetchedMetadata = await discoverOAuthMetadata(sseUrl);
+    if (!fetchedMetadata) {
+      throw new Error("Failed to discover OAuth metadata");
+    }
+    const parsedMetadata =
+      await OAuthMetadataSchema.parseAsync(fetchedMetadata);
+
+    return parsedMetadata;
   };
 
   const validateClientInformation = async (
@@ -108,8 +128,9 @@ const AuthDebugger = ({ sseUrl, onBack, authState, updateAuthState }: AuthDebugg
         }
         const parsedMetadata = await OAuthMetadataSchema.parseAsync(metadata);
         updateAuthState({ oauthMetadata: parsedMetadata });
+        provider.saveServerMetadata(parsedMetadata);
       } else if (authState.oauthStep === "metadata_discovery") {
-        const metadata = validateOAuthMetadata(authState.oauthMetadata);
+        const metadata = await validateOAuthMetadata(provider);
 
         updateAuthState({ oauthStep: "client_registration" });
 
@@ -127,7 +148,7 @@ const AuthDebugger = ({ sseUrl, onBack, authState, updateAuthState }: AuthDebugg
         provider.saveClientInformation(fullInformation);
         updateAuthState({ oauthClientInfo: fullInformation });
       } else if (authState.oauthStep === "client_registration") {
-        const metadata = validateOAuthMetadata(authState.oauthMetadata);
+        const metadata = await validateOAuthMetadata(provider);
         const clientInformation = await validateClientInformation(provider);
         updateAuthState({ oauthStep: "authorization_redirect" });
         try {
@@ -158,7 +179,10 @@ const AuthDebugger = ({ sseUrl, onBack, authState, updateAuthState }: AuthDebugg
           );
         }
       } else if (authState.oauthStep === "authorization_code") {
-        if (!authState.authorizationCode || authState.authorizationCode.trim() === "") {
+        if (
+          !authState.authorizationCode ||
+          authState.authorizationCode.trim() === ""
+        ) {
           updateAuthState({
             validationError: "You need to provide an authorization code",
           });
@@ -167,7 +191,7 @@ const AuthDebugger = ({ sseUrl, onBack, authState, updateAuthState }: AuthDebugg
         updateAuthState({ validationError: null, oauthStep: "token_request" });
       } else if (authState.oauthStep === "token_request") {
         const codeVerifier = provider.codeVerifier();
-        const metadata = validateOAuthMetadata(authState.oauthMetadata);
+        const metadata = await validateOAuthMetadata(provider);
         const clientInformation = await validateClientInformation(provider);
 
         const tokens = await exchangeAuthorization(sseUrl, {
@@ -285,6 +309,7 @@ const AuthDebugger = ({ sseUrl, onBack, authState, updateAuthState }: AuthDebugg
   }, [authState.statusMessage]);
 
   const renderOAuthFlow = useCallback(() => {
+    const provider = new DebugInspectorOAuthClientProvider(sseUrl);
     const steps = [
       {
         key: "not_started",
@@ -294,14 +319,14 @@ const AuthDebugger = ({ sseUrl, onBack, authState, updateAuthState }: AuthDebugg
       {
         key: "metadata_discovery",
         label: "Metadata Discovery",
-        metadata: authState.oauthMetadata && (
+        metadata: provider.getServerMetadata() && (
           <details className="text-xs mt-2">
             <summary className="cursor-pointer text-muted-foreground font-medium">
               Retrieved OAuth Metadata from {sseUrl}
               /.well-known/oauth-authorization-server
             </summary>
             <pre className="mt-2 p-2 bg-muted rounded-md overflow-auto max-h-[300px]">
-              {JSON.stringify(authState.oauthMetadata, null, 2)}
+              {JSON.stringify(provider.getServerMetadata(), null, 2)}
             </pre>
           </details>
         ),
@@ -491,7 +516,9 @@ const AuthDebugger = ({ sseUrl, onBack, authState, updateAuthState }: AuthDebugg
             authState.authorizationUrl && (
               <Button
                 variant="outline"
-                onClick={() => window.open(authState.authorizationUrl!, "_blank")}
+                onClick={() =>
+                  window.open(authState.authorizationUrl!, "_blank")
+                }
               >
                 Open in New Tab
               </Button>
@@ -499,7 +526,7 @@ const AuthDebugger = ({ sseUrl, onBack, authState, updateAuthState }: AuthDebugg
         </div>
       </div>
     );
-  }, [authState, sseUrl]);
+  }, [authState, sseUrl, proceedToNextStep, updateAuthState]);
 
   return (
     <div className="w-full p-4">

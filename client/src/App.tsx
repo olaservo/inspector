@@ -142,7 +142,7 @@ const App = () => {
     >
   >([]);
   const [isAuthDebuggerVisible, setIsAuthDebuggerVisible] = useState(false);
-  
+
   // Auth debugger state (moved from AuthDebugger component)
   const [authState, setAuthState] = useState<AuthDebuggerState>({
     isInitiatingAuth: false,
@@ -265,11 +265,17 @@ const App = () => {
   );
 
   // Auto-connect to previously saved serverURL after OAuth callback
-  const onOAuthDebugConnect = useCallback(() => {
+  const onOAuthDebugConnect = useCallback((serverUrl: string, authorizationCode?: string) => {
     setIsAuthDebuggerVisible(true);
+    if (authorizationCode) {
+      updateAuthState({
+        authorizationCode,
+        oauthStep: "token_request",
+      });
+    }
   }, []);
 
-  // Load OAuth tokens when sseUrl changes (moved from AuthDebugger)
+  // Load OAuth tokens when sseUrl changes
   useEffect(() => {
     const loadOAuthTokens = async () => {
       try {
@@ -294,20 +300,6 @@ const App = () => {
     };
 
     loadOAuthTokens();
-  }, [sseUrl]);
-
-  // Check for debug callback code (moved from AuthDebugger)
-  useEffect(() => {
-    const debugCode = sessionStorage.getItem(SESSION_KEYS.DEBUG_CODE);
-    if (debugCode && sseUrl) {
-      updateAuthState({
-        authorizationCode: debugCode,
-        oauthStep: "token_request",
-      });
-
-      // Now that we've processed it, clear the debug code
-      sessionStorage.removeItem(SESSION_KEYS.DEBUG_CODE);
-    }
   }, [sseUrl]);
 
   useEffect(() => {
@@ -558,7 +550,7 @@ const App = () => {
   // Helper function to render OAuth callback components
   const renderOAuthCallback = (
     path: string,
-    onConnect: (serverUrl: string) => void,
+    onConnect: (serverUrl: string, authorizationCode?: string) => void,
   ) => {
     const Component =
       path === "/oauth/callback"

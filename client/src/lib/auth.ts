@@ -8,7 +8,7 @@ import {
 import { SESSION_KEYS, getServerSpecificKey } from "./constants";
 
 export class InspectorOAuthClientProvider implements OAuthClientProvider {
-  constructor(private serverUrl: string) {
+  constructor(protected serverUrl: string) {
     // Save the server URL to session storage
     sessionStorage.setItem(SESSION_KEYS.SERVER_URL, serverUrl);
   }

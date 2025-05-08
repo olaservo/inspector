@@ -6,11 +6,7 @@ export const SESSION_KEYS = {
   SERVER_URL: "mcp_server_url",
   TOKENS: "mcp_tokens",
   CLIENT_INFORMATION: "mcp_client_information",
-  /**
-   * Temporary storage for OAuth authorization code during debug flow
-   * Used when authentication is done in a separate tab
-   */
-  DEBUG_CODE: "mcp_code",
+  SERVER_METADATA: "mcp_server_metadata",
 } as const;
 
 // Generate server-specific session storage keys

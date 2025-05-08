@@ -7,7 +7,7 @@ import {
 } from "@/utils/oauthUtils.ts";
 
 interface OAuthCallbackProps {
-  onConnect: (serverUrl: string) => void;
+  onConnect: (serverUrl: string, authorizationCode?: string) => void;
 }
 
 const OAuthDebugCallback = ({ onConnect }: OAuthCallbackProps) => {
@@ -50,18 +50,17 @@ const OAuthDebugCallback = ({ onConnect }: OAuthCallbackProps) => {
         return notifyError("Missing authorization code");
       }
 
-      sessionStorage.setItem(SESSION_KEYS.DEBUG_CODE, params.code);
+      // Instead of storing in sessionStorage, pass the code directly
+      // to the auth state manager through onConnect
+      onConnect(serverUrl, params.code);
 
-      // Finally, trigger navigation back to auth debugger
+      // Show success message
       toast({
         title: "Success",
         description:
-          "Authorization code received. Please return to the Auth Debugger.",
+          "Authorization code received. Returning to the Auth Debugger.",
         variant: "default",
       });
-
-      // Call onConnect to navigate back to the auth debugger
-      onConnect(serverUrl);
     };
 
     handleCallback().finally(() => {
