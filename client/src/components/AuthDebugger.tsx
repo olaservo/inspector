@@ -60,34 +60,7 @@ const AuthDebugger = ({
 }: AuthDebuggerProps) => {
   // Load client info asynchronously when we're at the token_request step
 
-  const validateOAuthMetadata = async (
-    provider: DebugInspectorOAuthClientProvider,
-  ): Promise<OAuthMetadata> => {
-    const metadata = provider.getServerMetadata();
-    if (metadata) {
-      return metadata;
-    }
-
-    const fetchedMetadata = await discoverOAuthMetadata(sseUrl);
-    if (!fetchedMetadata) {
-      throw new Error("Failed to discover OAuth metadata");
-    }
-    const parsedMetadata =
-      await OAuthMetadataSchema.parseAsync(fetchedMetadata);
-
-    return parsedMetadata;
-  };
-
-  const validateClientInformation = async (
-    provider: DebugInspectorOAuthClientProvider,
-  ): Promise<OAuthClientInformation> => {
-    const clientInformation = await provider.clientInformation();
-
-    if (!clientInformation) {
-      throw new Error("Can't advance without successful client registration");
-    }
-    return clientInformation;
-  };
+  // These functions will be moved inside proceedToNextStep to avoid ESLint warning
 
   const startOAuthFlow = useCallback(() => {
     if (!sseUrl) {
@@ -112,6 +85,36 @@ const AuthDebugger = ({
   const proceedToNextStep = useCallback(async () => {
     if (!sseUrl) return;
     const provider = new DebugInspectorOAuthClientProvider(sseUrl);
+
+    // Helper functions moved inside useCallback to avoid ESLint warning
+    const validateOAuthMetadata = async (
+      provider: DebugInspectorOAuthClientProvider,
+    ): Promise<OAuthMetadata> => {
+      const metadata = provider.getServerMetadata();
+      if (metadata) {
+        return metadata;
+      }
+
+      const fetchedMetadata = await discoverOAuthMetadata(sseUrl);
+      if (!fetchedMetadata) {
+        throw new Error("Failed to discover OAuth metadata");
+      }
+      const parsedMetadata =
+        await OAuthMetadataSchema.parseAsync(fetchedMetadata);
+
+      return parsedMetadata;
+    };
+
+    const validateClientInformation = async (
+      provider: DebugInspectorOAuthClientProvider,
+    ): Promise<OAuthClientInformation> => {
+      const clientInformation = await provider.clientInformation();
+
+      if (!clientInformation) {
+        throw new Error("Can't advance without successful client registration");
+      }
+      return clientInformation;
+    };
 
     try {
       updateAuthState({
@@ -213,7 +216,7 @@ const AuthDebugger = ({
     } finally {
       updateAuthState({ isInitiatingAuth: false });
     }
-  }, [sseUrl, authState, updateAuthState, validateOAuthMetadata]);
+  }, [sseUrl, authState, updateAuthState]);
 
   const handleStartOAuth = useCallback(async () => {
     if (!sseUrl) {
