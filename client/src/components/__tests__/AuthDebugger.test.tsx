@@ -59,10 +59,18 @@ import {
 } from "@modelcontextprotocol/sdk/client/auth.js";
 
 // Type the mocked functions properly
-const mockDiscoverOAuthMetadata = discoverOAuthMetadata as jest.MockedFunction<typeof discoverOAuthMetadata>;
-const mockRegisterClient = registerClient as jest.MockedFunction<typeof registerClient>;
-const mockStartAuthorization = startAuthorization as jest.MockedFunction<typeof startAuthorization>;
-const mockExchangeAuthorization = exchangeAuthorization as jest.MockedFunction<typeof exchangeAuthorization>;
+const mockDiscoverOAuthMetadata = discoverOAuthMetadata as jest.MockedFunction<
+  typeof discoverOAuthMetadata
+>;
+const mockRegisterClient = registerClient as jest.MockedFunction<
+  typeof registerClient
+>;
+const mockStartAuthorization = startAuthorization as jest.MockedFunction<
+  typeof startAuthorization
+>;
+const mockExchangeAuthorization = exchangeAuthorization as jest.MockedFunction<
+  typeof exchangeAuthorization
+>;
 
 // Mock Session Storage
 const sessionStorageMock = {
@@ -107,7 +115,7 @@ describe("AuthDebugger", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorageMock.getItem.mockReturnValue(null);
-    
+
     // Set up mock implementations
     mockDiscoverOAuthMetadata.mockResolvedValue(mockOAuthMetadata);
     mockRegisterClient.mockResolvedValue(mockOAuthClientInfo);
@@ -296,7 +304,9 @@ describe("AuthDebugger", () => {
         fireEvent.click(screen.getByText("Continue"));
       });
 
-      expect(mockDiscoverOAuthMetadata).toHaveBeenCalledWith("https://example.com");
+      expect(mockDiscoverOAuthMetadata).toHaveBeenCalledWith(
+        "https://example.com",
+      );
     });
   });
 });
