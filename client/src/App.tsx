@@ -268,7 +268,7 @@ const App = () => {
 
   // Auto-connect to previously saved serverURL after OAuth callback
   const onOAuthDebugConnect = useCallback(
-    (serverUrl: string, authorizationCode?: string) => {
+    (_serverUrl: string, authorizationCode?: string) => {
       setIsAuthDebuggerVisible(true);
       if (authorizationCode) {
         updateAuthState({
