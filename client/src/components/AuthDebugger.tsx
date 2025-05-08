@@ -82,7 +82,7 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
 
   // Helper function to update specific state properties
   const updateState = (updates: Partial<AuthDebuggerState>) => {
-    setState(prev => ({ ...prev, ...updates }));
+    setState((prev) => ({ ...prev, ...updates }));
   };
 
   // Load OAuth tokens on component mount
@@ -248,7 +248,9 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
         }
       } else if (state.oauthStep === "authorization_code") {
         if (!state.authorizationCode || state.authorizationCode.trim() === "") {
-          updateState({ validationError: "You need to provide an authorization code" });
+          updateState({
+            validationError: "You need to provide an authorization code",
+          });
           return;
         }
         updateState({ validationError: null, oauthStep: "token_request" });
@@ -270,7 +272,9 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
       }
     } catch (error) {
       console.error("OAuth flow error:", error);
-      updateState({ latestError: error instanceof Error ? error : new Error(String(error)) });
+      updateState({
+        latestError: error instanceof Error ? error : new Error(String(error)),
+      });
     } finally {
       updateState({ isInitiatingAuth: false });
     }
@@ -459,7 +463,9 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
               />
             </div>
             {state.validationError && (
-              <p className="text-xs text-red-600 mt-1">{state.validationError}</p>
+              <p className="text-xs text-red-600 mt-1">
+                {state.validationError}
+              </p>
             )}
             <p className="text-xs text-muted-foreground mt-1">
               Once you've completed authorization in the link, paste the code
@@ -515,7 +521,9 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
 
         <div className="space-y-3">
           {steps.map((step, idx) => {
-            const currentStepIdx = steps.findIndex((s) => s.key === state.oauthStep);
+            const currentStepIdx = steps.findIndex(
+              (s) => s.key === state.oauthStep,
+            );
             const isComplete = idx <= currentStepIdx;
             const isCurrent = step.key === state.oauthStep;
 
@@ -555,23 +563,28 @@ const AuthDebugger = ({ sseUrl, onBack }: AuthDebuggerProps) => {
 
         <div className="flex gap-3 mt-4">
           {state.oauthStep !== "complete" && (
-            <Button onClick={proceedToNextStep} disabled={state.isInitiatingAuth}>
+            <Button
+              onClick={proceedToNextStep}
+              disabled={state.isInitiatingAuth}
+            >
               {state.isInitiatingAuth
                 ? "Processing..."
-                : state.oauthStep === "authorization_redirect" && state.authorizationUrl
+                : state.oauthStep === "authorization_redirect" &&
+                    state.authorizationUrl
                   ? "Open Authorization URL"
                   : "Continue"}
             </Button>
           )}
 
-          {state.oauthStep === "authorization_redirect" && state.authorizationUrl && (
-            <Button
-              variant="outline"
-              onClick={() => window.open(state.authorizationUrl!, "_blank")}
-            >
-              Open in New Tab
-            </Button>
-          )}
+          {state.oauthStep === "authorization_redirect" &&
+            state.authorizationUrl && (
+              <Button
+                variant="outline"
+                onClick={() => window.open(state.authorizationUrl!, "_blank")}
+              >
+                Open in New Tab
+              </Button>
+            )}
         </div>
       </div>
     );

@@ -55,10 +55,11 @@ const OAuthDebugCallback = ({ onConnect }: OAuthCallbackProps) => {
       // Finally, trigger navigation back to auth debugger
       toast({
         title: "Success",
-        description: "Authorization code received. Please return to the Auth Debugger.",
+        description:
+          "Authorization code received. Please return to the Auth Debugger.",
         variant: "default",
       });
-      
+
       // Call onConnect to navigate back to the auth debugger
       onConnect(serverUrl);
     };
@@ -85,7 +86,7 @@ const OAuthDebugCallback = ({ onConnect }: OAuthCallbackProps) => {
           Please copy this authorization code and return to the Auth Debugger:
         </p>
         <code className="block p-2 bg-muted rounded-sm overflow-x-auto text-xs">
-          {callbackParams.successful && 'code' in callbackParams
+          {callbackParams.successful && "code" in callbackParams
             ? callbackParams.code
             : `No code found: ${callbackParams.error}, ${callbackParams.error_description}`}
         </code>

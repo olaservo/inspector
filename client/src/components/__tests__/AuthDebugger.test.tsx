@@ -1,4 +1,10 @@
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { describe, it, beforeEach, jest } from "@jest/globals";
 import AuthDebugger from "../AuthDebugger";
@@ -10,7 +16,7 @@ const mockOAuthTokens = {
   token_type: "Bearer",
   expires_in: 3600,
   refresh_token: "test_refresh_token",
-  scope: "test_scope"
+  scope: "test_scope",
 };
 
 const mockOAuthMetadata = {
@@ -59,14 +65,14 @@ const sessionStorageMock = {
   removeItem: jest.fn(),
   clear: jest.fn(),
 };
-Object.defineProperty(window, 'sessionStorage', {
+Object.defineProperty(window, "sessionStorage", {
   value: sessionStorageMock,
 });
 
 // Mock the location.origin
-Object.defineProperty(window, 'location', {
+Object.defineProperty(window, "location", {
   value: {
-    origin: 'http://localhost:3000',
+    origin: "http://localhost:3000",
   },
 });
 
@@ -79,11 +85,13 @@ describe("AuthDebugger", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorageMock.getItem.mockReturnValue(null);
-    (mockDiscoverOAuthMetadata as jest.Mock).mockResolvedValue(mockOAuthMetadata);
+    (mockDiscoverOAuthMetadata as jest.Mock).mockResolvedValue(
+      mockOAuthMetadata,
+    );
     (mockRegisterClient as jest.Mock).mockResolvedValue(mockOAuthClientInfo);
     (mockStartAuthorization as jest.Mock).mockResolvedValue({
       authorizationUrl: new URL("https://oauth.example.com/authorize"),
-      codeVerifier: "test_verifier"
+      codeVerifier: "test_verifier",
     });
     (mockExchangeAuthorization as jest.Mock).mockResolvedValue(mockOAuthTokens);
   });
@@ -92,7 +100,7 @@ describe("AuthDebugger", () => {
     return render(
       <TooltipProvider>
         <AuthDebugger {...defaultProps} {...props} />
-      </TooltipProvider>
+      </TooltipProvider>,
     );
   };
 
@@ -119,11 +127,11 @@ describe("AuthDebugger", () => {
       await act(async () => {
         renderAuthDebugger();
       });
-      
+
       await act(async () => {
         fireEvent.click(screen.getByText("Guided OAuth Flow"));
       });
-      
+
       expect(screen.getByText("OAuth Flow Progress")).toBeInTheDocument();
     });
 
@@ -131,14 +139,15 @@ describe("AuthDebugger", () => {
       await act(async () => {
         renderAuthDebugger({ sseUrl: "" });
       });
-      
+
       await act(async () => {
         fireEvent.click(screen.getByText("Guided OAuth Flow"));
       });
-      
+
       expect(mockToast).toHaveBeenCalledWith({
         title: "Error",
-        description: "Please enter a server URL in the sidebar before authenticating",
+        description:
+          "Please enter a server URL in the sidebar before authenticating",
         variant: "destructive",
       });
     });
@@ -153,11 +162,11 @@ describe("AuthDebugger", () => {
         }
         return null;
       });
-      
+
       await act(async () => {
         renderAuthDebugger();
       });
-      
+
       await waitFor(() => {
         expect(screen.getByText(/Access Token:/)).toBeInTheDocument();
       });
@@ -167,7 +176,7 @@ describe("AuthDebugger", () => {
       // Mock console to avoid cluttering test output
       const originalError = console.error;
       console.error = jest.fn();
-      
+
       // Mock getItem to return invalid JSON for tokens
       sessionStorageMock.getItem.mockImplementation((key) => {
         if (key === "[https://example.com] mcp_tokens") {
@@ -175,14 +184,14 @@ describe("AuthDebugger", () => {
         }
         return null;
       });
-      
+
       await act(async () => {
         renderAuthDebugger();
       });
-      
+
       // Component should still render despite the error
       expect(screen.getByText("Authentication Settings")).toBeInTheDocument();
-      
+
       // Restore console.error
       console.error = originalError;
     });
@@ -197,7 +206,7 @@ describe("AuthDebugger", () => {
         }
         return null;
       });
-      
+
       await act(async () => {
         renderAuthDebugger();
       });
@@ -221,21 +230,23 @@ describe("AuthDebugger", () => {
       await act(async () => {
         renderAuthDebugger();
       });
-      
+
       // Start guided flow
       await act(async () => {
         fireEvent.click(screen.getByText("Guided OAuth Flow"));
       });
-      
+
       // Verify metadata discovery step
       expect(screen.getByText("Metadata Discovery")).toBeInTheDocument();
-      
+
       // Click Continue - this should trigger metadata discovery
       await act(async () => {
         fireEvent.click(screen.getByText("Continue"));
       });
-      
-      expect(mockDiscoverOAuthMetadata).toHaveBeenCalledWith("https://example.com");
+
+      expect(mockDiscoverOAuthMetadata).toHaveBeenCalledWith(
+        "https://example.com",
+      );
     });
   });
 });
