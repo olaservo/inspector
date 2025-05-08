@@ -77,9 +77,25 @@ Object.defineProperty(window, "location", {
 });
 
 describe("AuthDebugger", () => {
+  const defaultAuthState = {
+    isInitiatingAuth: false,
+    oauthTokens: null,
+    loading: false,
+    oauthStep: "not_started" as const,
+    oauthMetadata: null,
+    oauthClientInfo: null,
+    authorizationUrl: null,
+    authorizationCode: "",
+    latestError: null,
+    statusMessage: null,
+    validationError: null,
+  };
+
   const defaultProps = {
     sseUrl: "https://example.com",
     onBack: jest.fn(),
+    authState: defaultAuthState,
+    updateAuthState: jest.fn(),
   };
 
   beforeEach(() => {
@@ -97,9 +113,14 @@ describe("AuthDebugger", () => {
   });
 
   const renderAuthDebugger = (props = {}) => {
+    const mergedProps = {
+      ...defaultProps,
+      ...props,
+      authState: { ...defaultAuthState, ...props.authState },
+    };
     return render(
       <TooltipProvider>
-        <AuthDebugger {...defaultProps} {...props} />
+        <AuthDebugger {...mergedProps} />
       </TooltipProvider>,
     );
   };
@@ -136,19 +157,21 @@ describe("AuthDebugger", () => {
     });
 
     it("should show error when OAuth flow is started without sseUrl", async () => {
+      const updateAuthState = jest.fn();
       await act(async () => {
-        renderAuthDebugger({ sseUrl: "" });
+        renderAuthDebugger({ sseUrl: "", updateAuthState });
       });
 
       await act(async () => {
         fireEvent.click(screen.getByText("Guided OAuth Flow"));
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
-        title: "Error",
-        description:
-          "Please enter a server URL in the sidebar before authenticating",
-        variant: "destructive",
+      expect(updateAuthState).toHaveBeenCalledWith({
+        statusMessage: {
+          type: "error",
+          message:
+            "Please enter a server URL in the sidebar before authenticating",
+        },
       });
     });
   });
@@ -164,7 +187,12 @@ describe("AuthDebugger", () => {
       });
 
       await act(async () => {
-        renderAuthDebugger();
+        renderAuthDebugger({
+          authState: { 
+            ...defaultAuthState, 
+            oauthTokens: mockOAuthTokens 
+          }
+        });
       });
 
       await waitFor(() => {
@@ -199,6 +227,7 @@ describe("AuthDebugger", () => {
 
   describe("OAuth State Management", () => {
     it("should clear OAuth state when Clear button is clicked", async () => {
+      const updateAuthState = jest.fn();
       // Mock the session storage to return tokens for the specific key
       sessionStorageMock.getItem.mockImplementation((key) => {
         if (key === "[https://example.com] mcp_tokens") {
@@ -208,16 +237,30 @@ describe("AuthDebugger", () => {
       });
 
       await act(async () => {
-        renderAuthDebugger();
+        renderAuthDebugger({
+          authState: {
+            ...defaultAuthState,
+            oauthTokens: mockOAuthTokens
+          },
+          updateAuthState
+        });
       });
 
       await act(async () => {
         fireEvent.click(screen.getByText("Clear OAuth State"));
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
-        title: "Success",
-        description: "OAuth tokens cleared successfully",
+      expect(updateAuthState).toHaveBeenCalledWith({
+        oauthTokens: null,
+        oauthStep: "not_started",
+        latestError: null,
+        oauthClientInfo: null,
+        authorizationCode: "",
+        validationError: null,
+        statusMessage: {
+          type: "success",
+          message: "OAuth tokens cleared successfully",
+        },
       });
 
       // Verify session storage was cleared
@@ -227,13 +270,16 @@ describe("AuthDebugger", () => {
 
   describe("OAuth Flow Steps", () => {
     it("should handle OAuth flow step progression", async () => {
+      const updateAuthState = jest.fn();
       await act(async () => {
-        renderAuthDebugger();
-      });
-
-      // Start guided flow
-      await act(async () => {
-        fireEvent.click(screen.getByText("Guided OAuth Flow"));
+        renderAuthDebugger({
+          updateAuthState,
+          authState: {
+            ...defaultAuthState,
+            isInitiatingAuth: false,  // Changed to false so button is enabled
+            oauthStep: "metadata_discovery"
+          }
+        });
       });
 
       // Verify metadata discovery step
