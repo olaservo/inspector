@@ -41,7 +41,7 @@ jest.mock("@/hooks/use-toast", () => ({
   }),
 }));
 
-// Mock MCP SDK functions
+// Mock MCP SDK functions - must be before imports
 jest.mock("@modelcontextprotocol/sdk/client/auth.js", () => ({
   auth: jest.fn(),
   discoverOAuthMetadata: jest.fn(),
@@ -50,13 +50,19 @@ jest.mock("@modelcontextprotocol/sdk/client/auth.js", () => ({
   exchangeAuthorization: jest.fn(),
 }));
 
-// Import mocked functions
+// Import the functions to get their types
 import {
-  discoverOAuthMetadata as mockDiscoverOAuthMetadata,
-  registerClient as mockRegisterClient,
-  startAuthorization as mockStartAuthorization,
-  exchangeAuthorization as mockExchangeAuthorization,
+  discoverOAuthMetadata,
+  registerClient,
+  startAuthorization,
+  exchangeAuthorization,
 } from "@modelcontextprotocol/sdk/client/auth.js";
+
+// Type the mocked functions properly
+const mockDiscoverOAuthMetadata = discoverOAuthMetadata as jest.MockedFunction<typeof discoverOAuthMetadata>;
+const mockRegisterClient = registerClient as jest.MockedFunction<typeof registerClient>;
+const mockStartAuthorization = startAuthorization as jest.MockedFunction<typeof startAuthorization>;
+const mockExchangeAuthorization = exchangeAuthorization as jest.MockedFunction<typeof exchangeAuthorization>;
 
 // Mock Session Storage
 const sessionStorageMock = {
@@ -101,22 +107,22 @@ describe("AuthDebugger", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorageMock.getItem.mockReturnValue(null);
-    (mockDiscoverOAuthMetadata as jest.Mock).mockResolvedValue(
-      mockOAuthMetadata,
-    );
-    (mockRegisterClient as jest.Mock).mockResolvedValue(mockOAuthClientInfo);
-    (mockStartAuthorization as jest.Mock).mockResolvedValue({
+    
+    // Set up mock implementations
+    mockDiscoverOAuthMetadata.mockResolvedValue(mockOAuthMetadata);
+    mockRegisterClient.mockResolvedValue(mockOAuthClientInfo);
+    mockStartAuthorization.mockResolvedValue({
       authorizationUrl: new URL("https://oauth.example.com/authorize"),
       codeVerifier: "test_verifier",
     });
-    (mockExchangeAuthorization as jest.Mock).mockResolvedValue(mockOAuthTokens);
+    mockExchangeAuthorization.mockResolvedValue(mockOAuthTokens);
   });
 
-  const renderAuthDebugger = (props = {}) => {
+  const renderAuthDebugger = (props: any = {}) => {
     const mergedProps = {
       ...defaultProps,
       ...props,
-      authState: { ...defaultAuthState, ...props.authState },
+      authState: { ...defaultAuthState, ...(props.authState || {}) },
     };
     return render(
       <TooltipProvider>
@@ -290,9 +296,7 @@ describe("AuthDebugger", () => {
         fireEvent.click(screen.getByText("Continue"));
       });
 
-      expect(mockDiscoverOAuthMetadata).toHaveBeenCalledWith(
-        "https://example.com",
-      );
+      expect(mockDiscoverOAuthMetadata).toHaveBeenCalledWith("https://example.com");
     });
   });
 });
