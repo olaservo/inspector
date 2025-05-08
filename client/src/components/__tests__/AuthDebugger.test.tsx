@@ -57,6 +57,7 @@ import {
   startAuthorization,
   exchangeAuthorization,
 } from "@modelcontextprotocol/sdk/client/auth.js";
+import { AuthDebuggerState } from "@/lib/auth-types";
 
 // Type the mocked functions properly
 const mockDiscoverOAuthMetadata = discoverOAuthMetadata as jest.MockedFunction<
@@ -126,7 +127,9 @@ describe("AuthDebugger", () => {
     mockExchangeAuthorization.mockResolvedValue(mockOAuthTokens);
   });
 
-  const renderAuthDebugger = (props: any = {}) => {
+  const renderAuthDebugger = (
+    props: { authState?: AuthDebuggerState } = {},
+  ) => {
     const mergedProps = {
       ...defaultProps,
       ...props,
