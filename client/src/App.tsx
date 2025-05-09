@@ -683,11 +683,24 @@ const App = () => {
                 {!serverCapabilities?.resources &&
                 !serverCapabilities?.prompts &&
                 !serverCapabilities?.tools ? (
-                  <div className="flex items-center justify-center p-4">
-                    <p className="text-lg text-gray-500">
-                      The connected server does not support any MCP capabilities
-                    </p>
-                  </div>
+                  <>
+                    <div className="flex items-center justify-center p-4">
+                      <p className="text-lg text-gray-500">
+                        The connected server does not support any MCP
+                        capabilities
+                      </p>
+                    </div>
+                    <PingTab
+                      onPingClick={() => {
+                        void sendMCPRequest(
+                          {
+                            method: "ping" as const,
+                          },
+                          EmptyResultSchema,
+                        );
+                      }}
+                    />
+                  </>
                 ) : (
                   <>
                     <ResourcesTab
@@ -755,6 +768,7 @@ const App = () => {
                       setSelectedPrompt={(prompt) => {
                         clearError("prompts");
                         setSelectedPrompt(prompt);
+                        setPromptContent("");
                       }}
                       handleCompletion={handleCompletion}
                       completionsSupported={completionsSupported}
