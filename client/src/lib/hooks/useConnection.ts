@@ -42,6 +42,7 @@ import {
   getMCPProxyAddress,
   getMCPServerRequestMaxTotalTimeout,
   resetRequestTimeoutOnProgress,
+  getMCPProxyAuthToken,
 } from "@/utils/configUtils";
 import { getMCPServerRequestTimeout } from "@/utils/configUtils";
 import { InspectorConfig } from "../configurationTypes";
@@ -242,7 +243,13 @@ export function useConnection({
   const checkProxyHealth = async () => {
     try {
       const proxyHealthUrl = new URL(`${getMCPProxyAddress(config)}/health`);
-      const proxyHealthResponse = await fetch(proxyHealthUrl);
+      const { token: proxyAuthToken, header: proxyAuthTokenHeader } =
+        getMCPProxyAuthToken(config);
+      const headers: HeadersInit = {};
+      if (proxyAuthToken) {
+        headers[proxyAuthTokenHeader] = `Bearer ${proxyAuthToken}`;
+      }
+      const proxyHealthResponse = await fetch(proxyHealthUrl, { headers });
       const proxyHealth = await proxyHealthResponse.json();
       if (proxyHealth?.status !== "ok") {
         throw new Error("MCP Proxy Server is not healthy");
@@ -258,6 +265,13 @@ export function useConnection({
       (error instanceof SseError && error.code === 401) ||
       (error instanceof Error && error.message.includes("401")) ||
       (error instanceof Error && error.message.includes("Unauthorized"))
+    );
+  };
+
+  const isProxyAuthError = (error: unknown): boolean => {
+    return (
+      error instanceof Error &&
+      error.message.includes("Authentication required. Use the session token")
     );
   };
 
@@ -318,6 +332,14 @@ export function useConnection({
         }
       }
 
+      // Add proxy authentication
+      const { token: proxyAuthToken, header: proxyAuthTokenHeader } =
+        getMCPProxyAuthToken(config);
+      const proxyHeaders: HeadersInit = {};
+      if (proxyAuthToken) {
+        proxyHeaders[proxyAuthTokenHeader] = `Bearer ${proxyAuthToken}`;
+      }
+
       // Create appropriate transport
       let transportOptions:
         | StreamableHTTPClientTransportOptions
@@ -335,11 +357,15 @@ export function useConnection({
             eventSourceInit: {
               fetch: (
                 url: string | URL | globalThis.Request,
-                init: RequestInit | undefined,
-              ) => fetch(url, { ...init, headers }),
+                init?: RequestInit,
+              ) =>
+                fetch(url, {
+                  ...init,
+                  headers: { ...headers, ...proxyHeaders },
+                }),
             },
             requestInit: {
-              headers,
+              headers: { ...headers, ...proxyHeaders },
             },
           };
           break;
@@ -351,11 +377,15 @@ export function useConnection({
             eventSourceInit: {
               fetch: (
                 url: string | URL | globalThis.Request,
-                init: RequestInit | undefined,
-              ) => fetch(url, { ...init, headers }),
+                init?: RequestInit,
+              ) =>
+                fetch(url, {
+                  ...init,
+                  headers: { ...headers, ...proxyHeaders },
+                }),
             },
             requestInit: {
-              headers,
+              headers: { ...headers, ...proxyHeaders },
             },
           };
           break;
@@ -367,11 +397,15 @@ export function useConnection({
             eventSourceInit: {
               fetch: (
                 url: string | URL | globalThis.Request,
-                init: RequestInit | undefined,
-              ) => fetch(url, { ...init, headers }),
+                init?: RequestInit,
+              ) =>
+                fetch(url, {
+                  ...init,
+                  headers: { ...headers, ...proxyHeaders },
+                }),
             },
             requestInit: {
-              headers,
+              headers: { ...headers, ...proxyHeaders },
             },
             // TODO these should be configurable...
             reconnectionOptions: {
@@ -446,6 +480,18 @@ export function useConnection({
           `Failed to connect to MCP Server via the MCP Inspector Proxy: ${mcpProxyServerUrl}:`,
           error,
         );
+
+        // Check if it's a proxy auth error
+        if (isProxyAuthError(error)) {
+          toast({
+            title: "Proxy Authentication Required",
+            description:
+              "Please enter the session token from the proxy server console in the Configuration settings.",
+            variant: "destructive",
+          });
+          setConnectionStatus("error");
+          return;
+        }
 
         const shouldRetry = await handleAuthError(error);
         if (shouldRetry) {
