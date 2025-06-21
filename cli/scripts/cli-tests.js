@@ -182,7 +182,6 @@ async function runBasicTest(testName, expectedBehavior, ...args) {
 
   console.log(`\n${colors.YELLOW}Testing: ${testName}${colors.NC}`);
   TOTAL_TESTS++;
-  console.log("basic test kavya " + TOTAL_TESTS);
 
   // Run the command and capture output
   console.log(
@@ -293,7 +292,6 @@ async function runErrorTest(testName, expectedBehavior, ...args) {
 
   console.log(`\n${colors.YELLOW}Testing error case: ${testName}${colors.NC}`);
   TOTAL_TESTS++;
-  console.log("error test kavya " + TOTAL_TESTS);
 
   // Run the command and capture output
   console.log(
