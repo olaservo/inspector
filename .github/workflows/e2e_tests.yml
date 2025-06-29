@@ -8,7 +8,8 @@ on:
 
 jobs:
   test:
-    timeout-minutes: 5
+    # Installing Playright dependencies can take quite awhile, and also depends on GitHub CI load.
+    timeout-minutes: 15
     runs-on: ubuntu-latest
 
     steps:
@@ -44,11 +45,12 @@ jobs:
         if: steps.cache-playwright.outputs.cache-hit != 'true'
 
       - name: Run Playwright tests
+        id: playwright-tests
         run: npm run test:e2e
 
       - name: Upload Playwright Report and Screenshots
         uses: actions/upload-artifact@v4
-        if: always()
+        if: steps.playwright-tests.conclusion != 'skipped'
         with:
           name: playwright-report
           path: |
@@ -59,7 +61,7 @@ jobs:
 
       - name: Publish Playwright Test Summary
         uses: daun/playwright-report-summary@v3
-        if: always()
+        if: steps.playwright-tests.conclusion != 'skipped'
         with:
           create-comment: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
           report-file: client/results.json

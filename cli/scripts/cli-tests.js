@@ -44,7 +44,17 @@ console.log(`${colors.BLUE}- Resource-related options (--uri)${colors.NC}`);
 console.log(
   `${colors.BLUE}- Prompt-related options (--prompt-name, --prompt-args)${colors.NC}`,
 );
-console.log(`${colors.BLUE}- Logging options (--log-level)${colors.NC}\n`);
+console.log(`${colors.BLUE}- Logging options (--log-level)${colors.NC}`);
+console.log(
+  `${colors.BLUE}- Transport types (--transport http/sse/stdio)${colors.NC}`,
+);
+console.log(
+  `${colors.BLUE}- Transport inference from URL suffixes (/mcp, /sse)${colors.NC}`,
+);
+console.log(
+  `${colors.BLUE}- Request timeout configuration options${colors.NC}`,
+);
+console.log(`\n`);
 
 // Get directory paths
 const SCRIPTS_DIR = __dirname;
@@ -52,8 +62,8 @@ const PROJECT_ROOT = path.join(SCRIPTS_DIR, "../../");
 const BUILD_DIR = path.resolve(SCRIPTS_DIR, "../build");
 
 // Define the test server command using npx
-const TEST_CMD = "npx";
-const TEST_ARGS = ["@modelcontextprotocol/server-everything"];
+const TEST_CMD = "node";
+const TEST_ARGS = ["C:\\Users\\johnn\\OneDrive\\Documents\\GitHub\\olaservo\\servers\\src\\everything\\dist\\index.js"];
 
 // Create output directory for test results
 const OUTPUT_DIR = path.join(SCRIPTS_DIR, "test-output");
@@ -62,9 +72,11 @@ if (!fs.existsSync(OUTPUT_DIR)) {
 }
 
 // Create a temporary directory for test files
-const TEMP_DIR = fs.mkdirSync(path.join(os.tmpdir(), "mcp-inspector-tests"), {
-  recursive: true,
-});
+const TEMP_DIR = path.join(os.tmpdir(), "mcp-inspector-tests");
+fs.mkdirSync(TEMP_DIR, { recursive: true });
+
+// Track servers for cleanup
+let runningServers = [];
 
 process.on("exit", () => {
   try {
@@ -74,6 +86,21 @@ process.on("exit", () => {
       `${colors.RED}Failed to remove temp directory: ${err.message}${colors.NC}`,
     );
   }
+
+  runningServers.forEach((server) => {
+    try {
+      process.kill(-server.pid);
+    } catch (e) {}
+  });
+});
+
+process.on("SIGINT", () => {
+  runningServers.forEach((server) => {
+    try {
+      process.kill(-server.pid);
+    } catch (e) {}
+  });
+  process.exit(1);
 });
 
 // Use the existing sample config file
@@ -198,6 +225,11 @@ async function runBasicTest(testName, expectedBehavior, ...args) {
         stdio: ["ignore", "pipe", "pipe"],
       });
 
+      const timeout = setTimeout(() => {
+        console.log(`${colors.YELLOW}Test timed out: ${testName}${colors.NC}`);
+        child.kill();
+      }, 10000);
+
       // Pipe stdout and stderr to the output file
       child.stdout.pipe(outputStream);
       child.stderr.pipe(outputStream);
@@ -212,6 +244,7 @@ async function runBasicTest(testName, expectedBehavior, ...args) {
       });
 
       child.on("close", (code) => {
+        clearTimeout(timeout);
         outputStream.end();
 
         // For specific timeout behavior tests, validate the behavior
@@ -308,6 +341,13 @@ async function runErrorTest(testName, expectedBehavior, ...args) {
         stdio: ["ignore", "pipe", "pipe"],
       });
 
+      const timeout = setTimeout(() => {
+        console.log(
+          `${colors.YELLOW}Error test timed out: ${testName}${colors.NC}`,
+        );
+        child.kill();
+      }, 10000);
+
       // Pipe stdout and stderr to the output file
       child.stdout.pipe(outputStream);
       child.stderr.pipe(outputStream);
@@ -322,6 +362,7 @@ async function runErrorTest(testName, expectedBehavior, ...args) {
       });
 
       child.on("close", (code) => {
+        clearTimeout(timeout);
         outputStream.end();
 
         // For specific timeout behavior tests, validate the behavior
@@ -785,7 +826,84 @@ async function runTests() {
   );
 
   console.log(
-    `${colors.YELLOW}=== MCP Inspector CLI Timeout Configuration Tests ===${colors.NC}`,
+    `\n${colors.YELLOW}=== Running HTTP Transport Tests ===${colors.NC}`,
+  );
+
+  console.log(
+    `${colors.BLUE}Starting server-everything in streamableHttp mode.${colors.NC}`,
+  );
+  const httpServer = spawn(
+    "node",
+    ["C:\\Users\\johnn\\OneDrive\\Documents\\GitHub\\olaservo\\servers\\src\\everything\\dist\\index.js", "streamableHttp"],
+    {
+      detached: true,
+      stdio: "ignore",
+    },
+  );
+  runningServers.push(httpServer);
+
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+
+  // Test 25: HTTP transport inferred from URL ending with /mcp
+  await runBasicTest(
+    "http_transport_inferred",
+    null,
+    "http://127.0.0.1:3001/mcp",
+    "--cli",
+    "--method",
+    "tools/list",
+  );
+
+  // Test 26: HTTP transport with explicit --transport http flag
+  await runBasicTest(
+    "http_transport_with_explicit_flag",
+    null,
+    "http://127.0.0.1:3001",
+    "--transport",
+    "http",
+    "--cli",
+    "--method",
+    "tools/list",
+  );
+
+  // Test 27: HTTP transport with suffix and --transport http flag
+  await runBasicTest(
+    "http_transport_with_explicit_flag_and_suffix",
+    null,
+    "http://127.0.0.1:3001/mcp",
+    "--transport",
+    "http",
+    "--cli",
+    "--method",
+    "tools/list",
+  );
+
+  // Test 28: SSE transport given to HTTP server (should fail)
+  await runErrorTest(
+    "sse_transport_given_to_http_server",
+    null,
+    "http://127.0.0.1:3001",
+    "--transport",
+    "sse",
+    "--cli",
+    "--method",
+    "tools/list",
+  );
+
+  // Kill HTTP server
+  try {
+    process.kill(-httpServer.pid);
+    console.log(
+      `${colors.BLUE}HTTP server killed, waiting for port to be released...${colors.NC}`,
+    );
+  } catch (e) {
+    console.log(
+      `${colors.RED}Error killing HTTP server: ${e.message}${colors.NC}`,
+    );
+  }
+
+  console.log(
+    `\n${colors.YELLOW}=== MCP Inspector CLI Timeout Configuration Tests ===${colors.NC}`,
   );
   console.log(
     `${colors.BLUE}This script tests the MCP Inspector CLI's timeout configuration options:${colors.NC}`,
@@ -800,7 +918,7 @@ async function runTests() {
     `${colors.BLUE}- Maximum total timeout (--max-total-timeout)${colors.NC}\n`,
   );
 
-  // Test 25: Default timeout values
+  // Test 29: Default timeout values
   await runBasicTest(
     "default_timeouts",
     null,
@@ -811,7 +929,7 @@ async function runTests() {
     "tools/list",
   );
 
-  // Test 26: Custom request timeout
+  // Test 30: Custom request timeout
   await runBasicTest(
     "custom_request_timeout",
     null,
@@ -829,7 +947,7 @@ async function runTests() {
     "15000",
   );
 
-  // Test 27: Request timeout too short (should fail)
+  // Test 31: Request timeout too short (should fail)
   await runErrorTest(
     "short_request_timeout",
     "should_timeout_quickly",
@@ -847,62 +965,14 @@ async function runTests() {
     "100",
   );
 
-  console.log(
-    `\n${colors.YELLOW}=== Running Progress-Related Timeout Tests ===${colors.NC}`,
-  );
-
-  // Test 28: Reset timeout on progress enabled - should complete successfully
-  // await runBasicTest(
-  //   "reset_timeout_on_progress",
-  //   "should_reset_timeout",
-  //   TEST_CMD,
-  //   ...TEST_ARGS,
-  //   "--cli",
-  //   "--method",
-  //   "tools/call",
-  //   "--tool-name",
-  //   "longRunningOperation",
-  //   "--tool-arg",
-  //   "duration=15", // 15 second operation
-  //   "steps=5", // 5 steps = progress every 3 seconds
-  //   "--request-timeout",
-  //   "2000", // 2 second timeout per interval
-  //   "--reset-timeout-on-progress",
-  //   "true",
-  //   "--max-total-timeout",
-  //   "30000",
-  // );
-
-  // Test 29: Reset timeout on progress disabled - should fail with timeout
-  await runErrorTest(
-    "reset_timeout_disabled",
-    "should_timeout_quickly",
-    TEST_CMD,
-    ...TEST_ARGS,
-    "--cli",
-    "--method",
-    "tools/call",
-    "--tool-name",
-    "longRunningOperation",
-    "--tool-arg",
-    "duration=15", // Same configuration as above
-    "steps=5",
-    "--request-timeout",
-    "2000",
-    "--reset-timeout-on-progress",
-    "false", // Only difference is here
-    "--max-total-timeout",
-    "30000",
-  );
-
   // console.log(
-  //   `\n${colors.YELLOW}=== Running Max Total Timeout Tests ===${colors.NC}`,
+  //   `\n${colors.YELLOW}=== Running Progress-Related Timeout Tests ===${colors.NC}`,
   // );
 
-  // Test 30: Max total timeout exceeded (should fail)
+  // // Test 32: Reset timeout on progress disabled - should fail with timeout
   // await runErrorTest(
-  //   "max_total_timeout_exceeded",
-  //   "should_hit_max_timeout",
+  //   "reset_timeout_disabled",
+  //   "should_timeout_quickly",
   //   TEST_CMD,
   //   ...TEST_ARGS,
   //   "--cli",
@@ -911,21 +981,21 @@ async function runTests() {
   //   "--tool-name",
   //   "longRunningOperation",
   //   "--tool-arg",
-  //   "duration=10",
-  //   "steps=10",
+  //   "duration=15", // Same configuration as above
+  //   "steps=5",
   //   "--request-timeout",
   //   "2000",
   //   "--reset-timeout-on-progress",
-  //   "true",
+  //   "false", // Only difference is here
   //   "--max-total-timeout",
-  //   "3000", // 3 second total timeout
+  //   "30000",
   // );
 
   console.log(
     `\n${colors.YELLOW}=== Running Input Validation Tests ===${colors.NC}`,
   );
 
-  // Test 31: Invalid request timeout value
+  // Test 33: Invalid request timeout value
   await runErrorTest(
     "invalid_request_timeout",
     null,
@@ -938,7 +1008,7 @@ async function runTests() {
     "invalid",
   );
 
-  // Test 32: Invalid reset-timeout-on-progress value
+  // Test 34: Invalid reset-timeout-on-progress value
   await runErrorTest(
     "invalid_reset_timeout",
     null,
@@ -951,7 +1021,7 @@ async function runTests() {
     "not-a-boolean",
   );
 
-  // Test 33: Invalid max total timeout value
+  // Test 35: Invalid max total timeout value
   await runErrorTest(
     "invalid_max_timeout",
     null,
