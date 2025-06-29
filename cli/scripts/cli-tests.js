@@ -63,7 +63,9 @@ const BUILD_DIR = path.resolve(SCRIPTS_DIR, "../build");
 
 // Define the test server command using npx
 const TEST_CMD = "node";
-const TEST_ARGS = ["C:\\Users\\johnn\\OneDrive\\Documents\\GitHub\\olaservo\\servers\\src\\everything\\dist\\index.js"];
+const TEST_ARGS = [
+  "C:\\Users\\johnn\\OneDrive\\Documents\\GitHub\\olaservo\\servers\\src\\everything\\dist\\index.js",
+];
 
 // Create output directory for test results
 const OUTPUT_DIR = path.join(SCRIPTS_DIR, "test-output");
@@ -834,7 +836,10 @@ async function runTests() {
   );
   const httpServer = spawn(
     "node",
-    ["C:\\Users\\johnn\\OneDrive\\Documents\\GitHub\\olaservo\\servers\\src\\everything\\dist\\index.js", "streamableHttp"],
+    [
+      "C:\\Users\\johnn\\OneDrive\\Documents\\GitHub\\olaservo\\servers\\src\\everything\\dist\\index.js",
+      "streamableHttp",
+    ],
     {
       detached: true,
       stdio: "ignore",
