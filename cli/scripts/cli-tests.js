@@ -858,7 +858,7 @@ async function runTests() {
   await runBasicTest(
     "http_transport_with_explicit_flag",
     null,
-    "http://127.0.0.1:3001",
+    "http://127.0.0.1:3001/mcp",
     "--transport",
     "http",
     "--cli",
@@ -883,6 +883,26 @@ async function runTests() {
     "sse_transport_given_to_http_server",
     null,
     "http://127.0.0.1:3001",
+    "--transport",
+    "sse",
+    "--cli",
+    "--method",
+    "tools/list",
+  );
+
+  // Test 29: HTTP transport without URL (should fail)
+  await runErrorTest(
+    "http_transport_without_url",
+    "--transport",
+    "http",
+    "--cli",
+    "--method",
+    "tools/list",
+  );
+
+  // Test 30: SSE transport without URL (should fail)
+  await runErrorTest(
+    "sse_transport_without_url",
     "--transport",
     "sse",
     "--cli",
