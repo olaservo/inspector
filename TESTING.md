@@ -18,7 +18,7 @@ Playwright tests for smoke testing core UI mode functions (such as connecting to
 
 ### E2E Testing Using Playwright MCP
 
-For additional testing, you can also use an [MCP client app](https://modelcontextprotocol.io/clients) with the [Playwright MCP server](https://github.com/microsoft/playwright-mcp) to automate testing Inspector using an LLM.
+For additional testing, you can also use an [MCP client app](https://modelcontextprotocol.io/clients) with the [Playwright MCP server](https://github.com/microsoft/playwright-mcp) to automate testing Inspector using an agent.
 
 We recommend generating a detailed, step-by-step test prompt to use with Playwright MCP based on the exact scenario you want to test, using the relevant GitHub issue and/or PR as context.  For example:
 
@@ -27,7 +27,9 @@ We recommend generating a detailed, step-by-step test prompt to use with Playwri
 **Example Testing Prompt:**
 
 ```markdown
-## Testing Plan
+## Inspector Testing Plan Using Playwright MCP Server
+
+You are testing MCP Inspector using the following plan.  You MUST use the Playwright MCP Server to follow the steps below.  If the Playwright MCP Server is unavailable or disconnected, you MUST stop testing and let the user know.
 
 ### Phase 1: Test Normal Authentication Flow (Default Behavior)
 
