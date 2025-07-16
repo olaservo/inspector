@@ -63,7 +63,7 @@ We recommend generating a detailed, step-by-step test prompt to use with Playwri
 
 ## Expected Outcomes
 
-If the issue is resolved, we should see:
+We should see:
 
 - ✅ STDIO connections work with proper authentication
 - ✅ Backward compatibility via DANGEROUSLY_OMIT_AUTH
