@@ -282,6 +282,8 @@ npm run build
 npm start
 ```
 
+For detailed development guidelines, please refer to the [CLAUDE.md](CLAUDE.md) file (which Claude Code will automatically reference).
+
 ### CLI Mode
 
 CLI mode enables programmatic interaction with MCP servers from the command line, ideal for scripting, automation, and integration with coding assistants. This creates an efficient feedback loop for MCP server development.
