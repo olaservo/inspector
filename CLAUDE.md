@@ -9,6 +9,17 @@
 - Format code: `npm run prettier-fix`
 - Client lint: `cd client && npm run lint`
 
+## Testing
+
+- Run all tests: `npm test` (prettier check + client unit tests)
+- Run CLI tests: `npm run test-cli`
+- Run E2E tests: `npm run test:e2e`
+- Run client tests in watch mode: `cd client && npm run test:watch`
+- Client uses Jest + React Testing Library for unit tests
+- E2E tests use Playwright with Chrome, Firefox, and WebKit
+- CLI has custom Node.js integration test suite
+- Test files follow `__tests__` directory pattern
+
 ## Code Style Guidelines
 
 - Use TypeScript with proper type annotations
