@@ -34,14 +34,31 @@ const defaultEnvironment = {
   ...(process.env.MCP_ENV_VARS ? JSON.parse(process.env.MCP_ENV_VARS) : {}),
 };
 
-const { values } = parseArgs({
-  args: process.argv.slice(2),
-  options: {
-    env: { type: "string", default: "" },
-    args: { type: "string", default: "" },
-    command: { type: "string", default: "" },
-  },
-});
+// Parse command line arguments with error handling for older Node.js versions
+let values: { env: string; args: string; command: string };
+try {
+  const result = parseArgs({
+    args: process.argv.slice(2),
+    options: {
+      env: { type: "string", default: "" },
+      args: { type: "string", default: "" },
+      command: { type: "string", default: "" },
+    },
+    allowPositionals: true,
+  });
+  values = result.values as { env: string; args: string; command: string };
+} catch (error) {
+  // Handle parseArgs errors gracefully, especially for older Node.js versions
+  // that are stricter about argument parsing
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  console.warn("Warning: Failed to parse command line arguments:", errorMessage);
+  console.warn("Using default values for all options.");
+  values = {
+    env: "",
+    args: "",
+    command: "",
+  };
+}
 
 // Function to get HTTP headers.
 // Supports only "sse" and "streamable-http" transport types.
