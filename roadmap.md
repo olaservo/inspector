@@ -28,6 +28,7 @@ We've also discussed separating this out into a dedicated repo, if that would he
     - Opening PRs for simple bugs
     - Needs references to MCP spec/docs and example tools for testing
 - Revisit how we want to label issues and PRs
+- Should we be actively taking thumbs up/voting into account for feature requests?
 - Playwright tests vs ad-hoc testing - what makes sense to expand here as part of CI vs doing on-demand?
 
 ## LLM Integration
