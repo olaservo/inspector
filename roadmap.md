@@ -25,7 +25,7 @@ Next steps after deciding on what is highest priority would be to set up a simpl
     - Initial pass at PR review
     - Initial pass at issue triage/labeling
     - Opening PRs for simple bugs
-    - Needs references to MCP spec/docs and example tools for testing
+    - Needs references to MCP spec/docs and example tools for testing (Ola has examples of this in personal repos to build on)
 - Revisit how we want to label issues and PRs
 - Should we be actively taking thumbs up/voting into account for feature requests?
 - Playwright tests vs ad-hoc testing - what makes sense to expand here as part of CI vs doing testing on-demand?
