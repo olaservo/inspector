@@ -4,6 +4,8 @@ This preliminary draft is to collect categories of improvements and discuss them
 
 Next steps after deciding on what is highest priority would be to set up a simple Project in the repo and reference the exact issues there.
 
+(Note that these aren't in any priority order yet, just collecting everything in one place.)
+
 ## CLI Mode
 
 - Configuration parity with UI mode
@@ -17,6 +19,7 @@ Next steps after deciding on what is highest priority would be to set up a simpl
 - Ability to edit/add arbitrary headers
 - Editing long sets of args (or other long values) in the sidebar text boxes is annoying
 - Revisit UI design
+- Server selection and management UI - Surface config file in a chooser to allow closing one server and starting another from the UI
 
 ## Automation/General Process Improvements
 
