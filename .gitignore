@@ -16,3 +16,4 @@ client/playwright-report/
 client/results.json
 client/test-results/
 mcp.json
+.worktrees
