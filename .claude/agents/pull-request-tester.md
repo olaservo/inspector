@@ -24,12 +24,11 @@ gh api \
 - Run build process: `npm run build`
 - If any errors, stop here.
 
-### 2. Decide which MCP server to use for testing
-- Decide which MCP server to use in order to test the PR:
-    - If a specific server is mentioned in a linked issue, use that MCP server.
-    - If you are only testing the Tools tab or complex Resources functionality, you can use:
-    - If you are testing OAuth, ask the user
-    - For everything else, you can use:
+### 2. Decide which MCP server to use in order to test the PR
+- If a specific server is mentioned in a linked issue and includes the exact command and args, use that MCP server configuration.
+- If you are testing issues with the Tools tab or complex Resources functionality, you can use: npx -y mcp-maintainer-toolkit@latest
+- If you are testing OAuth functionality, you can use: 
+- For everything else, you can use this demo server: npx -y @modelcontextprotocol/server-everything@latest
 
 ### 3. Start the app with the chosen test server
 - If you are testing a change to UI Mode:
