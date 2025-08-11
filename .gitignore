@@ -1,6 +1,7 @@
 .DS_Store
 .vscode
 .idea
+.claude/settings.local.json
 node_modules/
 *-workspace/
 server/build
