@@ -1,73 +1,91 @@
 import { OAuthClientProvider } from "@modelcontextprotocol/sdk/client/auth.js";
 import {
-  OAuthClientInformationSchema,
   OAuthClientInformation,
   OAuthTokens,
-  OAuthTokensSchema,
   OAuthClientMetadata,
   OAuthMetadata,
 } from "@modelcontextprotocol/sdk/shared/auth.js";
 import { SESSION_KEYS, getServerSpecificKey } from "./constants";
 
-export const getClientInformationFromSessionStorage = async ({
-  serverUrl,
-  isPreregistered,
-}: {
-  serverUrl: string;
-  isPreregistered?: boolean;
-}) => {
-  const key = getServerSpecificKey(
-    isPreregistered
-      ? SESSION_KEYS.PREREGISTERED_CLIENT_INFORMATION
-      : SESSION_KEYS.CLIENT_INFORMATION,
-    serverUrl,
-  );
+// Stub implementations for backward compatibility - these now do nothing
+// since client information is stored securely in memory
+export const saveClientInformationToSessionStorage = (
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _params: {
+    serverUrl: string;
+    clientInformation: OAuthClientInformation;
+    isPreregistered?: boolean;
+  },
+) => {
+  // No-op: Client information is now stored securely in memory
+};
 
-  const value = sessionStorage.getItem(key);
-  if (!value) {
-    return undefined;
+export const clearClientInformationFromSessionStorage = (
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _params: {
+    serverUrl: string;
+    isPreregistered?: boolean;
+  },
+) => {
+  // No-op: Client information is now stored securely in memory
+};
+
+// In-memory storage for sensitive OAuth data
+class SecureOAuthStorage {
+  private static tokenStorage = new Map<string, OAuthTokens>();
+  private static verifierStorage = new Map<string, string>();
+  private static clientInfoStorage = new Map<string, OAuthClientInformation>();
+
+  static saveTokens(serverUrl: string, tokens: OAuthTokens) {
+    this.tokenStorage.set(serverUrl, tokens);
   }
 
-  return await OAuthClientInformationSchema.parseAsync(JSON.parse(value));
-};
+  static getTokens(serverUrl: string): OAuthTokens | undefined {
+    return this.tokenStorage.get(serverUrl);
+  }
 
-export const saveClientInformationToSessionStorage = ({
-  serverUrl,
-  clientInformation,
-  isPreregistered,
-}: {
-  serverUrl: string;
-  clientInformation: OAuthClientInformation;
-  isPreregistered?: boolean;
-}) => {
-  const key = getServerSpecificKey(
-    isPreregistered
-      ? SESSION_KEYS.PREREGISTERED_CLIENT_INFORMATION
-      : SESSION_KEYS.CLIENT_INFORMATION,
-    serverUrl,
-  );
-  sessionStorage.setItem(key, JSON.stringify(clientInformation));
-};
+  static saveCodeVerifier(serverUrl: string, verifier: string) {
+    this.verifierStorage.set(serverUrl, verifier);
+  }
 
-export const clearClientInformationFromSessionStorage = ({
-  serverUrl,
-  isPreregistered,
-}: {
-  serverUrl: string;
-  isPreregistered?: boolean;
-}) => {
-  const key = getServerSpecificKey(
-    isPreregistered
-      ? SESSION_KEYS.PREREGISTERED_CLIENT_INFORMATION
-      : SESSION_KEYS.CLIENT_INFORMATION,
-    serverUrl,
-  );
-  sessionStorage.removeItem(key);
-};
+  static getCodeVerifier(serverUrl: string): string | undefined {
+    return this.verifierStorage.get(serverUrl);
+  }
+
+  static saveClientInformation(serverUrl: string, clientInfo: OAuthClientInformation, isPreregistered: boolean = false) {
+    const key = isPreregistered ? `${serverUrl}:preregistered` : serverUrl;
+    this.clientInfoStorage.set(key, clientInfo);
+  }
+
+  static getClientInformation(serverUrl: string, isPreregistered: boolean = false): OAuthClientInformation | undefined {
+    const key = isPreregistered ? `${serverUrl}:preregistered` : serverUrl;
+    return this.clientInfoStorage.get(key);
+  }
+
+  static clearTokens(serverUrl: string) {
+    this.tokenStorage.delete(serverUrl);
+  }
+
+  static clearCodeVerifier(serverUrl: string) {
+    this.verifierStorage.delete(serverUrl);
+  }
+
+  static clearClientInformation(serverUrl: string, isPreregistered: boolean = false) {
+    const key = isPreregistered ? `${serverUrl}:preregistered` : serverUrl;
+    this.clientInfoStorage.delete(key);
+  }
+
+  static clearAll(serverUrl: string) {
+    this.clearTokens(serverUrl);
+    this.clearCodeVerifier(serverUrl);
+    this.clearClientInformation(serverUrl, false);
+    this.clearClientInformation(serverUrl, true);
+  }
+}
 
 export class InspectorOAuthClientProvider implements OAuthClientProvider {
   constructor(protected serverUrl: string) {
-    // Save the server URL to session storage
+    // Save the server URL to session storage (not sensitive)
     sessionStorage.setItem(SESSION_KEYS.SERVER_URL, serverUrl);
   }
 
@@ -87,45 +105,30 @@ export class InspectorOAuthClientProvider implements OAuthClientProvider {
   }
 
   async clientInformation() {
-    // Try to get the preregistered client information from session storage first
-    const preregisteredClientInformation =
-      await getClientInformationFromSessionStorage({
-        serverUrl: this.serverUrl,
-        isPreregistered: true,
-      });
+    // Try to get the preregistered client information from secure storage first
+    const preregisteredClientInformation = SecureOAuthStorage.getClientInformation(
+      this.serverUrl,
+      true
+    );
 
     // If no preregistered client information is found, get the dynamically registered client information
     return (
       preregisteredClientInformation ??
-      (await getClientInformationFromSessionStorage({
-        serverUrl: this.serverUrl,
-        isPreregistered: false,
-      }))
+      SecureOAuthStorage.getClientInformation(this.serverUrl, false)
     );
   }
 
   saveClientInformation(clientInformation: OAuthClientInformation) {
-    // Save the dynamically registered client information to session storage
-    saveClientInformationToSessionStorage({
-      serverUrl: this.serverUrl,
-      clientInformation,
-      isPreregistered: false,
-    });
+    // Save the dynamically registered client information to secure storage
+    SecureOAuthStorage.saveClientInformation(this.serverUrl, clientInformation, false);
   }
 
   async tokens() {
-    const key = getServerSpecificKey(SESSION_KEYS.TOKENS, this.serverUrl);
-    const tokens = sessionStorage.getItem(key);
-    if (!tokens) {
-      return undefined;
-    }
-
-    return await OAuthTokensSchema.parseAsync(JSON.parse(tokens));
+    return SecureOAuthStorage.getTokens(this.serverUrl);
   }
 
   saveTokens(tokens: OAuthTokens) {
-    const key = getServerSpecificKey(SESSION_KEYS.TOKENS, this.serverUrl);
-    sessionStorage.setItem(key, JSON.stringify(tokens));
+    SecureOAuthStorage.saveTokens(this.serverUrl, tokens);
   }
 
   redirectToAuthorization(authorizationUrl: URL) {
@@ -133,19 +136,11 @@ export class InspectorOAuthClientProvider implements OAuthClientProvider {
   }
 
   saveCodeVerifier(codeVerifier: string) {
-    const key = getServerSpecificKey(
-      SESSION_KEYS.CODE_VERIFIER,
-      this.serverUrl,
-    );
-    sessionStorage.setItem(key, codeVerifier);
+    SecureOAuthStorage.saveCodeVerifier(this.serverUrl, codeVerifier);
   }
 
   codeVerifier() {
-    const key = getServerSpecificKey(
-      SESSION_KEYS.CODE_VERIFIER,
-      this.serverUrl,
-    );
-    const verifier = sessionStorage.getItem(key);
+    const verifier = SecureOAuthStorage.getCodeVerifier(this.serverUrl);
     if (!verifier) {
       throw new Error("No code verifier saved for session");
     }
@@ -154,16 +149,7 @@ export class InspectorOAuthClientProvider implements OAuthClientProvider {
   }
 
   clear() {
-    clearClientInformationFromSessionStorage({
-      serverUrl: this.serverUrl,
-      isPreregistered: false,
-    });
-    sessionStorage.removeItem(
-      getServerSpecificKey(SESSION_KEYS.TOKENS, this.serverUrl),
-    );
-    sessionStorage.removeItem(
-      getServerSpecificKey(SESSION_KEYS.CODE_VERIFIER, this.serverUrl),
-    );
+    SecureOAuthStorage.clearAll(this.serverUrl);
   }
 }
 

@@ -124,11 +124,11 @@ const App = () => {
   });
 
   const [oauthClientId, setOauthClientId] = useState<string>(() => {
-    return localStorage.getItem("lastOauthClientId") || "";
+    return sessionStorage.getItem("lastOauthClientId") || "";
   });
 
   const [oauthScope, setOauthScope] = useState<string>(() => {
-    return localStorage.getItem("lastOauthScope") || "";
+    return sessionStorage.getItem("lastOauthScope") || "";
   });
 
   const [pendingSampleRequests, setPendingSampleRequests] = useState<
@@ -320,11 +320,11 @@ const App = () => {
   }, [headerName]);
 
   useEffect(() => {
-    localStorage.setItem("lastOauthClientId", oauthClientId);
+    sessionStorage.setItem("lastOauthClientId", oauthClientId);
   }, [oauthClientId]);
 
   useEffect(() => {
-    localStorage.setItem("lastOauthScope", oauthScope);
+    sessionStorage.setItem("lastOauthScope", oauthScope);
   }, [oauthScope]);
 
   useEffect(() => {
