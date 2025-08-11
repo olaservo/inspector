@@ -21,6 +21,11 @@ Next steps after deciding on what is highest priority would be to set up a simpl
 - Revisit UI design
 - Server selection and management UI - Surface config file in a chooser to allow closing one server and starting another from the UI
 
+## OAuth Debugging and Compatibility Checking
+
+- Outh testing and debugging hiccups: see issues labeled `auth` for examples
+- Client auth compatibility checker (See: https://github.com/modelcontextprotocol/inspector/pull/694/files)
+
 ## Automation/General Process Improvements
 
 - Automatic dependency updates with Dependabot (SDK, etc.)
