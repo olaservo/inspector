@@ -8,6 +8,7 @@ import {
   OAuthMetadata,
 } from "@modelcontextprotocol/sdk/shared/auth.js";
 import { SESSION_KEYS, getServerSpecificKey } from "./constants";
+import { generateOAuthState } from "@/utils/oauthUtils";
 
 export const getClientInformationFromSessionStorage = async ({
   serverUrl,
@@ -86,6 +87,10 @@ export class InspectorOAuthClientProvider implements OAuthClientProvider {
     };
   }
 
+  state(): string | Promise<string> {
+    return generateOAuthState();
+  }
+
   async clientInformation() {
     // Try to get the preregistered client information from session storage first
     const preregisteredClientInformation =
@@ -129,6 +134,12 @@ export class InspectorOAuthClientProvider implements OAuthClientProvider {
   }
 
   redirectToAuthorization(authorizationUrl: URL) {
+    if (
+      authorizationUrl.protocol !== "http:" &&
+      authorizationUrl.protocol !== "https:"
+    ) {
+      throw new Error("Authorization URL must be HTTP or HTTPS");
+    }
     window.location.href = authorizationUrl.href;
   }
 
