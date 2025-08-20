@@ -111,6 +111,7 @@ export class InspectorOAuthClientProvider implements OAuthClientProvider {
     sessionStorage.setItem(SESSION_KEYS.SERVER_URL, serverUrl);
   }
   scope: string | undefined;
+  private temporaryClientSecret?: string;
 
   get redirectUrl() {
     return window.location.origin + "/oauth/callback";
@@ -141,16 +142,30 @@ export class InspectorOAuthClientProvider implements OAuthClientProvider {
       });
 
     // If no preregistered client information is found, get the dynamically registered client information
-    return (
+    let clientInfo =
       preregisteredClientInformation ??
       (await getClientInformationFromSessionStorage({
         serverUrl: this.serverUrl,
         isPreregistered: false,
-      }))
-    );
+      }));
+
+    // If we have a temporary client secret, add it back for this request
+    if (clientInfo && this.temporaryClientSecret) {
+      clientInfo = {
+        ...clientInfo,
+        client_secret: this.temporaryClientSecret,
+      };
+    }
+
+    return clientInfo;
   }
 
   saveClientInformation(clientInformation: OAuthClientInformation) {
+    // Store client_secret temporarily for OAuth flow
+    if (clientInformation.client_secret) {
+      this.temporaryClientSecret = clientInformation.client_secret;
+    }
+
     // Remove client_secret before storing (not needed after initial OAuth flow)
     const safeInfo = Object.fromEntries(
       Object.entries(clientInformation).filter(
@@ -179,6 +194,9 @@ export class InspectorOAuthClientProvider implements OAuthClientProvider {
   saveTokens(tokens: OAuthTokens) {
     const key = getServerSpecificKey(SESSION_KEYS.TOKENS, this.serverUrl);
     sessionStorage.setItem(key, JSON.stringify(tokens));
+
+    // Clear temporary client secret after successful token exchange
+    this.temporaryClientSecret = undefined;
   }
 
   redirectToAuthorization(authorizationUrl: URL) {
@@ -223,6 +241,9 @@ export class InspectorOAuthClientProvider implements OAuthClientProvider {
     sessionStorage.removeItem(
       getServerSpecificKey(SESSION_KEYS.CODE_VERIFIER, this.serverUrl),
     );
+
+    // Clear temporary client secret
+    this.temporaryClientSecret = undefined;
   }
 }
 
