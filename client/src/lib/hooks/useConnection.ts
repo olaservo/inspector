@@ -36,7 +36,7 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { z } from "zod";
 import { ConnectionStatus } from "../constants";
-import { Notification, StdErrNotificationSchema } from "../notificationTypes";
+import { Notification } from "../notificationTypes";
 import {
   auth,
   discoverOAuthProtectedResourceMetadata,
@@ -92,7 +92,6 @@ export function useConnection({
   oauthScope,
   config,
   onNotification,
-  onStdErrNotification,
   onPendingRequest,
   onElicitationRequest,
   getRoots,
@@ -503,13 +502,6 @@ export function useConnection({
           onNotification(notification);
           return Promise.resolve();
         };
-      }
-
-      if (onStdErrNotification) {
-        client.setNotificationHandler(
-          StdErrNotificationSchema,
-          onStdErrNotification,
-        );
       }
 
       let capabilities;
