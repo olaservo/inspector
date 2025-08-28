@@ -29,6 +29,14 @@ npx @modelcontextprotocol/inspector
 
 The server will start up and the UI will be accessible at `http://localhost:6274`.
 
+### Docker Container
+
+You can also start it in a Docker container with the following command:
+
+```bash
+docker run --rm --network host -p 6274:6274 -p 6277:6277 ghcr.io/modelcontextprotocol/inspector:latest
+```
+
 ### From an MCP server repository
 
 To inspect an MCP server implementation, there's no need to clone this repo. Instead, use `npx`. For example, if your server is built at `build/index.js`:
