@@ -19,3 +19,4 @@ client/test-results/
 client/e2e/test-results/
 mcp.json
 .worktrees
+.claude/settings.local.json
