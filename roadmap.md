@@ -1,51 +1,34 @@
-# MCP Inspector Roadmap
+# MCP Inspector Roadmap for 1.0
 
-This preliminary draft is to collect categories of improvements and discuss them with the maintainers group.
+This document outlines which features and bugs we plan to include for a 1.0 release.
 
-Next steps after deciding on what is highest priority would be to set up a simple Project in the repo and reference the exact issues there.
+(Note that these aren't all in priority order.)
 
-(Note that these aren't in any priority order yet, just collecting everything in one place.)
+## Auth Developer Experience
 
-## CLI Mode
+OAuth and other auth-related debugging is especially valuable for MCP server developers. As the official debugging tool for MCP, Inspector can take advantage of working group expertise and oversight to support a robust and reliable auth debugging experience.
 
-- Configuration parity with UI mode
-- Feature parity with UI mode
-- Would separating the CLI out into a dedicated repo help with maintainability?
+- TODO: see issues labeled `auth` and label any critical outstanding feature requests or open issues.
+- Establish a simple process for Auth DX Working Group to help in reviewing and addressing auth-related issues and PRs going forward.
 
 ## UX Improvements (UI Mode)
 
-- Not all configs are saved consistently
-- Configs file support is inconsistent between modes
-- Ability to edit/add arbitrary headers
-- Editing long sets of args (or other long values) in the sidebar text boxes is annoying
-- Revisit UI design
-- Server selection and management UI - Surface config file in a chooser to allow closing one server and starting another from the UI
+- Resolve any critical tool testing issues (revisit and resolve open PRs for handling defaults, nulls, nested values).
+- TODO: Are there any other essential UX improvements we want to prioritize here?
 
-## OAuth Debugging and Compatibility Checking
+## CLI Mode Parity
 
-- Outh testing and debugging hiccups: see issues labeled `auth` for examples
-- Client auth compatibility checker (See: https://github.com/modelcontextprotocol/inspector/pull/694/files)
+- Configuration parity with UI mode
+- Feature parity with UI mode (excluding sampling and elicitation)
 
 ## Automation/General Process Improvements
 
-- Automatic dependency updates with Dependabot (SDK, etc.)
-- Automation with Claude Code Github Action:
-  - Initial pass at PR review
-  - Initial pass at issue triage/labeling
-  - Opening PRs for simple bugs
-  - Needs references to MCP spec/docs and example tools for testing. Examples that could be incorporated into a 'Maintainer Toolkit MCP Server' or something similar:
-    - https://github.com/olaservo/mcp-advisor
-    - https://github.com/olaservo/mcp-misc/tree/main/example-tools
-- Revisit how we want to label issues and PRs
-- Should we be actively taking thumbs up/voting into account for feature requests?
-- Playwright tests vs ad-hoc testing - what makes sense to expand here as part of CI vs doing testing on-demand?
-  - And what can Claude be instructed to do with Playwright, etc?
+This includes everything that isn't already mentioned in "Auth Developer Experience" above. These aren't really tied to a release version but we should still plan to review and address them in that timeframe.
 
-## LLM Integration
-
-We previously decided not to include this, but people are finding it useful in alternative testing apps. Our previous concerns were around maintainability and whether this really belongs in Inspector.
-
-Examples:
-
-- Chat functionality to test MCP features
-- Real sampling with an LLM
+- TODO: Automation with Claude Code Github Action:
+  - Should we use Claude for an initial pass at issue triage/labeling?
+  - Any other low hanging fruit for automation?
+- TODO: Revisit how we want to label issues and PRs
+- TODO: Should we be actively taking thumbs up/voting into account for feature requests?
+- TODO: Playwright tests vs ad-hoc testing - what makes sense to expand here as part of CI vs doing testing on-demand?
+  - Can Claude be instructed to handle additional regression testing with Playwright, etc?
