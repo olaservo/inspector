@@ -14,6 +14,7 @@ OAuth and other auth-related debugging is especially valuable for MCP server dev
 ## UX Improvements (UI Mode)
 
 - Resolve any critical tool testing issues (revisit and resolve open PRs for handling defaults, nulls, nested values).
+- Resolve any critical issues with saving and/or editing server configs.
 - TODO: Are there any other essential UX improvements we want to prioritize here?
 
 ## CLI Mode Parity
