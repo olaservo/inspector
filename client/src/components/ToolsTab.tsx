@@ -7,17 +7,30 @@ import { TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import DynamicJsonForm from "./DynamicJsonForm";
 import type { JsonValue, JsonSchemaType } from "@/utils/jsonUtils";
-import { generateDefaultValue, isPropertyRequired } from "@/utils/schemaUtils";
+import {
+  generateDefaultValue,
+  isPropertyRequired,
+  normalizeUnionType,
+} from "@/utils/schemaUtils";
 import {
   CompatibilityCallToolResult,
   ListToolsResult,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import { Loader2, Send, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Loader2,
+  Send,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  CheckCheck,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import ListPane from "./ListPane";
 import JsonView from "./JsonView";
 import ToolResults from "./ToolResults";
+import { useToast } from "@/lib/hooks/useToast";
+import useCopy from "@/lib/hooks/useCopy";
 
 // Type guard to safely detect the optional _meta field without using `any`
 const hasMeta = (tool: Tool): tool is Tool & { _meta: unknown } =>
@@ -51,6 +64,8 @@ const ToolsTab = ({
   const [isToolRunning, setIsToolRunning] = useState(false);
   const [isOutputSchemaExpanded, setIsOutputSchemaExpanded] = useState(false);
   const [isMetaExpanded, setIsMetaExpanded] = useState(false);
+  const { toast } = useToast();
+  const { copied, setCopied } = useCopy();
 
   useEffect(() => {
     const params = Object.entries(
@@ -104,7 +119,7 @@ const ToolsTab = ({
                 </p>
                 {Object.entries(selectedTool.inputSchema.properties ?? []).map(
                   ([key, value]) => {
-                    const prop = value as JsonSchemaType;
+                    const prop = normalizeUnionType(value as JsonSchemaType);
                     const inputSchema =
                       selectedTool.inputSchema as JsonSchemaType;
                     const required = isPropertyRequired(key, inputSchema);
@@ -148,7 +163,10 @@ const ToolsTab = ({
                             onChange={(e) =>
                               setParams({
                                 ...params,
-                                [key]: e.target.value,
+                                [key]:
+                                  e.target.value === ""
+                                    ? undefined
+                                    : e.target.value,
                               })
                             }
                             className="mt-1"
@@ -284,29 +302,54 @@ const ToolsTab = ({
                       </div>
                     </div>
                   )}
-                <Button
-                  onClick={async () => {
-                    try {
-                      setIsToolRunning(true);
-                      await callTool(selectedTool.name, params);
-                    } finally {
-                      setIsToolRunning(false);
-                    }
-                  }}
-                  disabled={isToolRunning}
-                >
-                  {isToolRunning ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Running...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4 mr-2" />
-                      Run Tool
-                    </>
-                  )}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={async () => {
+                      try {
+                        setIsToolRunning(true);
+                        await callTool(selectedTool.name, params);
+                      } finally {
+                        setIsToolRunning(false);
+                      }
+                    }}
+                    disabled={isToolRunning}
+                  >
+                    {isToolRunning ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Running...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Run Tool
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        navigator.clipboard.writeText(
+                          JSON.stringify(params, null, 2),
+                        );
+                        setCopied(true);
+                      } catch (error) {
+                        toast({
+                          title: "Error",
+                          description: `There was an error copying input to the clipboard: ${error instanceof Error ? error.message : String(error)}`,
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  >
+                    {copied ? (
+                      <CheckCheck className="h-4 w-4 mr-2 dark:text-green-700 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4 mr-2" />
+                    )}
+                    Copy Input
+                  </Button>
+                </div>
                 <ToolResults
                   toolResult={toolResult}
                   selectedTool={selectedTool}
