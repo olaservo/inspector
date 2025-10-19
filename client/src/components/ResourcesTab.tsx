@@ -52,6 +52,7 @@ const ResourcesTab = ({
     ref: ResourceReference | PromptReference,
     argName: string,
     value: string,
+    context?: Record<string, string>,
   ) => Promise<string[]>;
   completionsSupported: boolean;
   resourceContent: string;
@@ -94,6 +95,7 @@ const ResourcesTab = ({
         },
         key,
         value,
+        templateValues,
       );
     }
   };
@@ -223,7 +225,9 @@ const ResourcesTab = ({
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription className="break-all">
+                  {error}
+                </AlertDescription>
               </Alert>
             ) : selectedResource ? (
               <JsonView

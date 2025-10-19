@@ -1,6 +1,6 @@
 {
   "name": "@modelcontextprotocol/inspector",
-  "version": "0.16.1",
+  "version": "0.17.0",
   "description": "Model Context Protocol inspector",
   "license": "MIT",
   "author": "Anthropic, PBC (https://anthropic.com)",
@@ -41,34 +41,42 @@
     "prettier-fix": "prettier --write .",
     "prettier-check": "prettier --check .",
     "lint": "prettier --check . && cd client && npm run lint",
-    "prepare": "npm run build",
+    "prepare": "husky && npm run build",
     "publish-all": "npm publish --workspaces --access public && npm publish --access public",
     "update-version": "node scripts/update-version.js",
     "check-version": "node scripts/check-version-consistency.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/inspector-cli": "^0.16.1",
-    "@modelcontextprotocol/inspector-client": "^0.16.1",
-    "@modelcontextprotocol/inspector-server": "^0.16.1",
-    "@modelcontextprotocol/sdk": "^1.13.1",
-    "concurrently": "^9.0.1",
-    "open": "^10.1.0",
-    "shell-quote": "^1.8.2",
+    "@modelcontextprotocol/inspector-cli": "^0.17.0",
+    "@modelcontextprotocol/inspector-client": "^0.17.0",
+    "@modelcontextprotocol/inspector-server": "^0.17.0",
+    "@modelcontextprotocol/sdk": "^1.18.0",
+    "concurrently": "^9.2.0",
+    "node-fetch": "^3.3.2",
+    "open": "^10.2.0",
+    "shell-quote": "^1.8.3",
     "spawn-rx": "^5.1.2",
     "ts-node": "^10.9.2",
-    "zod": "^3.23.8"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@playwright/test": "^1.52.0",
+    "@playwright/test": "^1.54.1",
     "@types/jest": "^29.5.14",
-    "@types/node": "^22.7.5",
+    "@types/node": "^22.17.0",
     "@types/shell-quote": "^1.7.5",
+    "husky": "^9.1.7",
     "jest-fixed-jsdom": "^0.0.9",
-    "prettier": "3.3.3",
+    "lint-staged": "^16.1.5",
+    "prettier": "^3.6.2",
     "rimraf": "^6.0.1",
     "typescript": "^5.4.2"
   },
   "engines": {
     "node": ">=22.7.5"
+  },
+  "lint-staged": {
+    "**/*.{js,ts,jsx,tsx,json,md}": [
+      "prettier --write"
+    ]
   }
 }

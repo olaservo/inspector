@@ -1,4 +1,12 @@
 import { InspectorConfig } from "./configurationTypes";
+import packageJson from "../../package.json";
+
+// Client identity for MCP connections
+export const CLIENT_IDENTITY = (() => {
+  const [, name = packageJson.name] = packageJson.name.split("/");
+  const version = packageJson.version;
+  return { name, version };
+})();
 
 // OAuth-related session storage keys
 export const SESSION_KEYS = {
@@ -6,6 +14,7 @@ export const SESSION_KEYS = {
   SERVER_URL: "mcp_server_url",
   TOKENS: "mcp_tokens",
   CLIENT_INFORMATION: "mcp_client_information",
+  PREREGISTERED_CLIENT_INFORMATION: "mcp_preregistered_client_information",
   SERVER_METADATA: "mcp_server_metadata",
   AUTH_DEBUGGER_STATE: "mcp_auth_debugger_state",
 } as const;

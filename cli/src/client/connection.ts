@@ -20,6 +20,12 @@ export async function connect(
 ): Promise<void> {
   try {
     await client.connect(transport, options);
+
+    if (client.getServerCapabilities()?.logging) {
+      // default logging level is undefined in the spec, but the user of the
+      // inspector most likely wants debug.
+      await client.setLoggingLevel("debug");
+    }
   } catch (error) {
     throw new Error(
       `Failed to connect to MCP server: ${error instanceof Error ? error.message : String(error)}`,
