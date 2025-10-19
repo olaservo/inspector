@@ -908,6 +908,7 @@ async function runTests() {
   // Test 25: Config with stdio transport type
   await runBasicTest(
     "config_stdio_type",
+    null,
     "--config",
     stdioConfigPath,
     "--server",
@@ -920,6 +921,7 @@ async function runTests() {
   // Test 26: Config with SSE transport type (CLI mode) - expects connection error
   await runErrorTest(
     "config_sse_type_cli",
+    null,
     "--config",
     sseConfigPath,
     "--server",
@@ -932,6 +934,7 @@ async function runTests() {
   // Test 27: Config with streamable-http transport type (CLI mode) - expects connection error
   await runErrorTest(
     "config_http_type_cli",
+    null,
     "--config",
     httpConfigPath,
     "--server",
@@ -944,6 +947,7 @@ async function runTests() {
   // Test 28: Legacy config without type field (backward compatibility)
   await runBasicTest(
     "config_legacy_no_type",
+    null,
     "--config",
     legacyConfigPath,
     "--server",
@@ -1028,6 +1032,7 @@ async function runTests() {
   // Test 29: Config with single server auto-selection
   await runBasicTest(
     "single_server_auto_select",
+    null,
     "--config",
     singleServerConfigPath,
     "--cli",
@@ -1038,6 +1043,7 @@ async function runTests() {
   // Test 30: Config with default-server should now require explicit selection (multiple servers)
   await runErrorTest(
     "default_server_requires_explicit_selection",
+    null,
     "--config",
     defaultServerConfigPath,
     "--cli",
@@ -1048,6 +1054,7 @@ async function runTests() {
   // Test 31: Config with multiple servers and no default (should fail)
   await runErrorTest(
     "multi_server_no_default",
+    null,
     "--config",
     multiServerConfigPath,
     "--cli",
