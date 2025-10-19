@@ -419,8 +419,8 @@ npx modelcontextprotocol/inspector --cli node build/index.js --method tools/call
 # With request timeout configs (in milliseconds) - reset timeout on progress
 npx modelcontextprotocol/inspector --cli node build/index.js --method tools/call --tool-name longRunningOperation --tool-arg duration=15 steps=5 --reset-timeout-on-progress true
 
-# With request timeout configs (in milliseconds) - max total timeout
-npx modelcontextprotocol/inspector --cli node build/index.js --method tools/call --tool-name longRunningOperation --tool-arg duration=15 steps=5 --max-total-timeout 30000
+# With request timeout configs (in milliseconds) - max total timeout (used with request timeout and reset timeout on progress)
+npx modelcontextprotocol/inspector --cli node build/index.js --method tools/call --tool-name longRunningOperation --tool-arg duration=35 steps=5 --reset-timeout-on-progress true --request-timeout 7000 --max-total-timeout 35000
 
 # List available tools
 npx @modelcontextprotocol/inspector --cli node build/index.js --method tools/list

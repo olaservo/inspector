@@ -1075,6 +1075,7 @@ async function runTests() {
     {
       detached: true,
       stdio: "ignore",
+      shell: true,
     },
   );
   runningServers.push(httpServer);
@@ -1222,11 +1223,39 @@ async function runTests() {
     "100",
   );
 
+  // Test 32: Combined timeout options for long-running operations
+  // This tests request-timeout + reset-timeout-on-progress + max-total-timeout working together
+  // Note: We cannot fully validate progress-based timeout resets in CLI mode since progress
+  // notifications are not yet captured/handled, so the timeout won't actually reset on progress.
+  // We use a request-timeout long enough for the operation to complete without relying on resets.
+  await runBasicTest(
+    "combined_timeout_options",
+    null,
+    TEST_CMD,
+    ...TEST_ARGS,
+    "--cli",
+    "--method",
+    "tools/call",
+    "--tool-name",
+    "longRunningOperation",
+    "--tool-arg",
+    "duration=2",
+    "steps=2",
+    "--request-timeout",
+    "5000",
+    "--reset-timeout-on-progress",
+    "true",
+    "--max-total-timeout",
+    "10000",
+  );
+
   // console.log(
   //   `\n${colors.YELLOW}=== Running Progress-Related Timeout Tests ===${colors.NC}`,
   // );
 
-  // // Test 32: Reset timeout on progress disabled - should fail with timeout
+  // // Test 33: Reset timeout on progress disabled - should fail with timeout
+  // // This test is commented out because we cannot yet capture progress notifications
+  // // in CLI mode to validate that timeouts are NOT being reset on progress
   // await runErrorTest(
   //   "reset_timeout_disabled",
   //   "should_timeout_quickly",
@@ -1238,12 +1267,12 @@ async function runTests() {
   //   "--tool-name",
   //   "longRunningOperation",
   //   "--tool-arg",
-  //   "duration=15", // Same configuration as above
+  //   "duration=15",
   //   "steps=5",
   //   "--request-timeout",
   //   "2000",
   //   "--reset-timeout-on-progress",
-  //   "false", // Only difference is here
+  //   "false",
   //   "--max-total-timeout",
   //   "30000",
   // );
@@ -1252,7 +1281,7 @@ async function runTests() {
     `\n${colors.YELLOW}=== Running Input Validation Tests ===${colors.NC}`,
   );
 
-  // Test 33: Invalid request timeout value
+  // Test 34: Invalid request timeout value
   await runErrorTest(
     "invalid_request_timeout",
     null,
@@ -1265,7 +1294,7 @@ async function runTests() {
     "invalid",
   );
 
-  // Test 34: Invalid reset-timeout-on-progress value
+  // Test 35: Invalid reset-timeout-on-progress value
   await runErrorTest(
     "invalid_reset_timeout",
     null,
@@ -1278,7 +1307,7 @@ async function runTests() {
     "not-a-boolean",
   );
 
-  // Test 35: Invalid max total timeout value
+  // Test 36: Invalid max total timeout value
   await runErrorTest(
     "invalid_max_timeout",
     null,
