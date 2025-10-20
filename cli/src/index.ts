@@ -43,6 +43,9 @@ type Args = {
   toolArg?: Record<string, JsonValue>;
   transport?: "sse" | "stdio" | "http";
   headers?: Record<string, string>;
+  requestTimeout?: number;
+  resetTimeoutOnProgress?: boolean;
+  maxTotalTimeout?: number;
 };
 
 function createTransportOptions(
@@ -137,7 +140,11 @@ async function callMethod(args: Args): Promise<void> {
         );
       }
 
-      result = await callTool(client, args.toolName, args.toolArg || {});
+      result = await callTool(client, args.toolName, args.toolArg || {}, {
+        requestTimeout: args.requestTimeout,
+        resetTimeoutOnProgress: args.resetTimeoutOnProgress,
+        maxTotalTimeout: args.maxTotalTimeout,
+      });
     }
     // Resources methods
     else if (args.method === "resources/list") {
@@ -328,6 +335,47 @@ function parseArgs(): Args {
       'HTTP headers as "HeaderName: Value" pairs (for HTTP/SSE transports)',
       parseHeaderPair,
       {},
+    )
+    //
+    // Request timeout options
+    //
+    .option(
+      "--request-timeout <milliseconds>",
+      "Timeout for individual MCP requests in milliseconds",
+      (value: string) => {
+        const timeout = parseInt(value, 10);
+        if (isNaN(timeout) || timeout <= 0) {
+          throw new Error(
+            `Invalid request timeout: ${value}. Must be a positive integer.`,
+          );
+        }
+        return timeout;
+      },
+    )
+    .option(
+      "--reset-timeout-on-progress <boolean>",
+      "Reset request timeout when progress notifications are received (true/false)",
+      (value: string) => {
+        if (value !== "true" && value !== "false") {
+          throw new Error(
+            `Invalid reset-timeout-on-progress value: ${value}. Must be 'true' or 'false'.`,
+          );
+        }
+        return value === "true";
+      },
+    )
+    .option(
+      "--max-total-timeout <milliseconds>",
+      "Maximum total timeout for requests including progress resets in milliseconds",
+      (value: string) => {
+        const timeout = parseInt(value, 10);
+        if (isNaN(timeout) || timeout <= 0) {
+          throw new Error(
+            `Invalid max total timeout: ${value}. Must be a positive integer.`,
+          );
+        }
+        return timeout;
+      },
     );
 
   // Parse only the arguments before --

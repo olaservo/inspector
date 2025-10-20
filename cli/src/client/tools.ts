@@ -1,5 +1,6 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import type { Progress } from "@modelcontextprotocol/sdk/types.js";
+import { CallToolResultSchema, Tool } from "@modelcontextprotocol/sdk/types.js";
 import { McpResponse } from "./types.js";
 
 // JSON value type matching the client utils
@@ -78,10 +79,17 @@ function convertParameters(
   return result;
 }
 
+export interface TimeoutOptions {
+  requestTimeout?: number;
+  resetTimeoutOnProgress?: boolean;
+  maxTotalTimeout?: number;
+}
+
 export async function callTool(
   client: Client,
   name: string,
   args: Record<string, JsonValue>,
+  timeoutOptions?: TimeoutOptions,
 ): Promise<McpResponse> {
   try {
     const toolsResponse = await listTools(client);
@@ -106,10 +114,53 @@ export async function callTool(
       }
     }
 
-    const response = await client.callTool({
-      name: name,
-      arguments: convertedArgs,
-    });
+    // Prepare SDK request options with timeout configuration
+    const requestOptions: {
+      timeout?: number;
+      resetTimeoutOnProgress?: boolean;
+      maxTotalTimeout?: number;
+      onprogress?: (params: Progress) => void;
+    } = {};
+
+    if (timeoutOptions?.requestTimeout !== undefined) {
+      requestOptions.timeout = timeoutOptions.requestTimeout;
+    }
+
+    if (timeoutOptions?.resetTimeoutOnProgress !== undefined) {
+      requestOptions.resetTimeoutOnProgress =
+        timeoutOptions.resetTimeoutOnProgress;
+    }
+
+    if (timeoutOptions?.maxTotalTimeout !== undefined) {
+      requestOptions.maxTotalTimeout = timeoutOptions.maxTotalTimeout;
+    }
+
+    // If progress notifications are enabled, add an onprogress hook
+    // This is required by SDK to reset the timeout on progress notifications
+    if (requestOptions.resetTimeoutOnProgress) {
+      requestOptions.onprogress = (params: Progress) => {
+        // Display progress notification to stderr (so it doesn't interfere with JSON output on stdout)
+        const progressInfo = {
+          method: "notifications/progress",
+          params,
+        };
+        console.error(`[PROGRESS] ${JSON.stringify(progressInfo, null, 2)}`);
+      };
+    }
+
+    // Use the lower-level request() method to pass timeout options
+    // The higher-level callTool() method doesn't support request options
+    const response = await client.request(
+      {
+        method: "tools/call",
+        params: {
+          name: name,
+          arguments: convertedArgs,
+        },
+      },
+      CallToolResultSchema,
+      requestOptions,
+    );
     return response;
   } catch (error) {
     throw new Error(
