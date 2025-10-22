@@ -1249,33 +1249,31 @@ async function runTests() {
     "10000",
   );
 
-  // console.log(
-  //   `\n${colors.YELLOW}=== Running Progress-Related Timeout Tests ===${colors.NC}`,
-  // );
+  console.log(
+    `\n${colors.YELLOW}=== Running Progress-Related Timeout Tests ===${colors.NC}`,
+  );
 
-  // // Test 33: Reset timeout on progress disabled - should fail with timeout
-  // // This test is commented out because we cannot yet capture progress notifications
-  // // in CLI mode to validate that timeouts are NOT being reset on progress
-  // await runErrorTest(
-  //   "reset_timeout_disabled",
-  //   "should_timeout_quickly",
-  //   TEST_CMD,
-  //   ...TEST_ARGS,
-  //   "--cli",
-  //   "--method",
-  //   "tools/call",
-  //   "--tool-name",
-  //   "longRunningOperation",
-  //   "--tool-arg",
-  //   "duration=15",
-  //   "steps=5",
-  //   "--request-timeout",
-  //   "2000",
-  //   "--reset-timeout-on-progress",
-  //   "false",
-  //   "--max-total-timeout",
-  //   "30000",
-  // );
+  // Test 33: Reset timeout on progress disabled - should fail with timeout
+  await runErrorTest(
+    "reset_timeout_disabled",
+    "should_timeout_quickly",
+    TEST_CMD,
+    ...TEST_ARGS,
+    "--cli",
+    "--method",
+    "tools/call",
+    "--tool-name",
+    "longRunningOperation",
+    "--tool-arg",
+    "duration=15",
+    "steps=5",
+    "--request-timeout",
+    "2000",
+    "--reset-timeout-on-progress",
+    "false",
+    "--max-total-timeout",
+    "30000",
+  );
 
   console.log(
     `\n${colors.YELLOW}=== Running Input Validation Tests ===${colors.NC}`,
