@@ -30,11 +30,15 @@ import {
   Progress,
   LoggingLevel,
   ElicitRequestSchema,
+  Implementation,
 } from "@modelcontextprotocol/sdk/types.js";
+import type {
+  AnySchema,
+  SchemaOutput,
+} from "@modelcontextprotocol/sdk/server/zod-compat.js";
 import { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import { useEffect, useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
-import { z } from "zod";
 import { ConnectionStatus, CLIENT_IDENTITY } from "../constants";
 import { Notification } from "../notificationTypes";
 import {
@@ -83,6 +87,7 @@ interface UseConnectionOptions {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getRoots?: () => any[];
   defaultLoggingLevel?: LoggingLevel;
+  serverImplementation?: Implementation;
   metadata?: Record<string, string>;
 }
 
@@ -122,6 +127,8 @@ export function useConnection({
   const [mcpProtocolVersion, setMcpProtocolVersion] = useState<string | null>(
     null,
   );
+  const [serverImplementation, setServerImplementation] =
+    useState<Implementation | null>(null);
 
   useEffect(() => {
     if (!oauthClientId) {
@@ -166,11 +173,11 @@ export function useConnection({
     ]);
   };
 
-  const makeRequest = async <T extends z.ZodType>(
+  const makeRequest = async <T extends AnySchema>(
     request: ClientRequest,
     schema: T,
     options?: RequestOptions & { suppressToast?: boolean },
-  ): Promise<z.output<T>> => {
+  ): Promise<SchemaOutput<T>> => {
     if (!mcpClient) {
       throw new Error("MCP client not connected");
     }
@@ -723,6 +730,8 @@ export function useConnection({
         setClientTransport(transport);
 
         capabilities = client.getServerCapabilities();
+        const serverInfo = client.getServerVersion();
+        setServerImplementation(serverInfo || null);
         const initializeRequest = {
           method: "initialize",
         };
@@ -840,11 +849,13 @@ export function useConnection({
 
   const clearRequestHistory = () => {
     setRequestHistory([]);
+    setServerImplementation(null);
   };
 
   return {
     connectionStatus,
     serverCapabilities,
+    serverImplementation,
     mcpClient,
     requestHistory,
     clearRequestHistory,
