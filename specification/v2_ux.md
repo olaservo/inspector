@@ -93,29 +93,41 @@ Initial screen shown when no server is connected. Displays server cards in a res
 Each server in the list is displayed as a card with connection controls and status.
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│ [Icon] Server Name              v1.0.0                  │
-│        STDIO                    [●] Connected  [Toggle] │
-├─────────────────────────────────────────────────────────┤
-│ npx -y @modelcontextprotocol/server-everything    [Copy]│
-├─────────────────────────────────────────────────────────┤
-│ [Server Info]                          [Edit] [Remove]  │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│ [Icon] Server Name                        v1.0.0                │
+│        STDIO                              [●] Connected [Toggle]│
+├─────────────────────────────────────────────────────────────────┤
+│ npx -y @modelcontextprotocol/server-everything            [Copy]│
+├─────────────────────────────────────────────────────────────────┤
+│ [Server Info] [Settings] [Clone]                 [Edit] [Remove]│
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**With OAuth (shows OAuth Debug button):**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ [Icon] Server Name                        v1.0.0                │
+│        HTTP (OAuth)                       [●] Connected [Toggle]│
+├─────────────────────────────────────────────────────────────────┤
+│ https://api.example.com/mcp                               [Copy]│
+├─────────────────────────────────────────────────────────────────┤
+│ [Server Info] [Settings] [OAuth Debug] [Clone]   [Edit] [Remove]│
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 **With Error State:**
 ```
-┌─────────────────────────────────────────────────────────┐
-│ [Icon] Server Name              v1.0.0                  │
-│        HTTP                     [●] Failed (3) [Toggle] │
-├─────────────────────────────────────────────────────────┤
-│ https://api.example.com/mcp                       [Copy]│
-├─────────────────────────────────────────────────────────┤
-│ [Server Info]                          [Edit] [Remove]  │
-├─────────────────────────────────────────────────────────┤
-│ [!] Connection timeout after 20s                       │
-│ [Show more]              [View Troubleshooting Guide →] │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│ [Icon] Server Name                        v1.0.0                │
+│        HTTP                               [●] Failed (3)[Toggle]│
+├─────────────────────────────────────────────────────────────────┤
+│ https://api.example.com/mcp                               [Copy]│
+├─────────────────────────────────────────────────────────────────┤
+│ [Server Info] [Settings] [Clone]                 [Edit] [Remove]│
+├─────────────────────────────────────────────────────────────────┤
+│ [!] Connection timeout after 20s                                │
+│ [Show more]                        [View Troubleshooting Guide] │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 **Status Indicators:**
