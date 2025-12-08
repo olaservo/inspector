@@ -131,6 +131,7 @@ Each server in the list is displayed as a card with connection controls and stat
 - **Copy** - Copy command/URL to clipboard
 - **Server Info** - Opens server info modal
 - **Settings** - Opens server settings modal (see below)
+- **OAuth Debug** - Opens OAuth debugger modal (visible when server uses OAuth)
 - **Clone** - Duplicates server config for creating variants
 - **Edit** - Opens edit server modal
 - **Remove** - Deletes server (with confirmation)
