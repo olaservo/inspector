@@ -559,6 +559,10 @@ Each feature screen uses a **resizable panel layout** for flexibility.
   - Dropdown suggestions as user types
   - Supports enum and dynamic completion
 - Form generated from tool input schema
+- **Per-Tool Metadata** - [Edit Metadata] button to set tool-specific `_meta` fields:
+  - Stored per-server, per-tool (not in global localStorage)
+  - Merged with server-level metadata on each call
+  - Use case: Different progressToken behavior, tool-specific tracking IDs
 - **Progress Indicator** from `notifications/progress`:
   - Progress bar with percentage
   - Step description if provided
