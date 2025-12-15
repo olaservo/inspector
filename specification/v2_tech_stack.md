@@ -20,7 +20,72 @@
 ### Components and Theme
 Let's choose a feature-rich component set with easy theming control
 * -[ ] [Mantine](https://ui.mantine.dev/)
-* -[ ] [Shadcdn](https://ui.shadcn.com/)
+* -[x] [Shadcn](https://ui.shadcn.com/)
+
+#### Shadcn Rationale
+
+Shadcn is recommended based on evaluation of both prototype implementations (`v2/prototype/shadcn` and `v2/prototype/mantine`).
+
+**Why Shadcn over Mantine:**
+
+| Requirement | Shadcn | Mantine |
+|-------------|--------|---------|
+| Component ownership | Yes - Copy to codebase | No - npm dependency |
+| Styling approach | Tailwind CSS | CSS-in-JS (emotion) |
+| Bundle size | Minimal - Only used components | Larger - Full library |
+| Customization | Full control - Edit source directly | Theme config only |
+| Accessibility | Radix UI primitives | Built-in a11y |
+| TypeScript support | Full type safety | Full type safety |
+| Dark mode | CSS variables | Context provider |
+
+**Benefits:**
+
+1. **Component Ownership** - Components are copied into your project, not installed as dependencies. This means:
+   - Full control over implementation details
+   - No breaking changes from library updates
+   - Easy to modify for project-specific needs
+   - No version lock-in
+
+2. **Tailwind CSS Integration** - Modern utility-first CSS approach:
+   - Consistent with broader React ecosystem trends
+   - Excellent DX with IDE autocomplete
+   - Easy theme customization via CSS variables
+   - Smaller production bundles (unused styles purged)
+
+3. **Radix UI Foundation** - Built on battle-tested accessibility primitives:
+   - WCAG 2.1 compliant out of the box
+   - Keyboard navigation handled correctly
+   - Screen reader support built-in
+   - Focus management done right
+
+4. **Simpler Theme Architecture** - CSS variables for theming:
+   - Light/dark mode via CSS class toggle
+   - No React context re-renders on theme change
+   - Easy to extend with custom color schemes
+   - Works seamlessly with Tailwind
+
+5. **Developer Experience from Prototype**:
+   - Faster iteration when modifying components
+   - Clear, readable component code
+   - Better debugging (source is in your project)
+   - No "magic" - what you see is what you get
+
+**Tradeoffs Acknowledged:**
+
+- **Initial setup** - Requires adding components individually (vs Mantine's single install)
+- **Less "batteries included"** - Some advanced features need additional work (e.g., date pickers, rich text)
+- **Documentation** - Mantine has more extensive API docs for each prop
+
+**Prototype Comparison:**
+
+Both prototypes implement the same V2 UX spec. Key observations:
+
+| Aspect | Shadcn Prototype | Mantine Prototype |
+|--------|------------------|-------------------|
+| Code clarity | Component code visible in project | Abstracted in node_modules |
+| Theme toggle | CSS class swap | useMantineColorScheme hook |
+| Custom styling | Add Tailwind classes directly | Override with sx prop or styles API |
+| Component modification | Edit the file | Create wrapper or fork |
 
 ## Proxy Server
 ### Language and Runtime
