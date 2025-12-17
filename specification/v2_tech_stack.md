@@ -34,43 +34,29 @@ Shadcn is recommended based on evaluation of both prototype implementations (`v2
 | Styling approach | Tailwind CSS | CSS-in-JS (emotion) |
 | Bundle size | Minimal - Only used components | Larger - Full library |
 | Customization | Full control - Edit source directly | Theme config only |
-| Accessibility | Radix UI primitives | Built-in a11y |
-| TypeScript support | Full type safety | Full type safety |
 | Dark mode | CSS variables | Context provider |
 
 **Benefits:**
 
 1. **Component Ownership** - Components are copied into your project, not installed as dependencies. This means:
-   - Full control over implementation details
-   - No breaking changes from library updates
-   - Easy to modify for project-specific needs
-   - No version lock-in
+   - More control over implementation details
+   - Easier to modify for project-specific needs
 
-2. **Tailwind CSS Integration** - Modern utility-first CSS approach:
-   - Consistent with broader React ecosystem trends
-   - Excellent DX with IDE autocomplete
-   - Easy theme customization via CSS variables
+2. **Tailwind CSS Integration**:
+   - Theme customization via CSS variables
    - Smaller production bundles (unused styles purged)
 
-3. **Radix UI Foundation** - Built on battle-tested accessibility primitives:
-   - WCAG 2.1 compliant out of the box
-   - Keyboard navigation handled correctly
-   - Screen reader support built-in
-   - Focus management done right
-
-4. **Simpler Theme Architecture** - CSS variables for theming:
+3. **Simpler Theme Architecture** - CSS variables for theming:
    - Light/dark mode via CSS class toggle
-   - No React context re-renders on theme change
    - Easy to extend with custom color schemes
    - Works seamlessly with Tailwind
 
-5. **Developer Experience from Prototype**:
+4. **Developer Experience from Prototype**:
    - Faster iteration when modifying components
-   - Clear, readable component code
-   - Better debugging (source is in your project)
-   - No "magic" - what you see is what you get
+   - More readable component code
+   - Easier debugging (source is in your project)
 
-**Tradeoffs Acknowledged:**
+**Tradeoffs:**
 
 - **Initial setup** - Requires adding components individually (vs Mantine's single install)
 - **Less "batteries included"** - Some advanced features need additional work (e.g., date pickers, rich text)
