@@ -21,11 +21,7 @@ This document provides visual screenshots from the **Shadcn UI prototype** (`v2/
 
 The home screen showing server connection cards in a responsive grid.
 
-### Light Theme
-![Server List - Light](screenshots/shadcn-serverlist.png)
-
-### Dark Theme
-![Server List - Dark](screenshots/shadcn-serverlist-dark.png)
+![Server List](screenshots/shadcn-serverlist.png)
 
 ### Add Server Dropdown
 Options for adding a new server (manual, import config, import server.json).
@@ -79,11 +75,7 @@ Active and completed tasks with progress bars and status indicators.
 
 Request history with replay and pin functionality.
 
-#### Light Theme
-![History Screen - Light](screenshots/shadcn-history.png)
-
-#### Dark Theme
-![History Screen - Dark](screenshots/shadcn-history-dark.png)
+![History Screen](screenshots/shadcn-history.png)
 
 ---
 
