@@ -19,60 +19,55 @@
 * React
 
 ### Components and Theme
-Let's choose a feature-rich component set with easy theming control
-* -[ ] [Mantine](https://ui.mantine.dev/)
-* -[x] [Shadcn](https://ui.shadcn.com/)
+* -[x] [Mantine](https://ui.mantine.dev/)
+* -[ ] [Shadcn](https://ui.shadcn.com/)
 
-#### Shadcn Rationale
+#### Mantine Rationale
 
-Shadcn is recommended based on evaluation of both prototype implementations (`v2/prototype/shadcn` and `v2/prototype/mantine`).
+Mantine is recommended based on evaluation of both prototype implementations (`v2/prototype/shadcn` and `v2/prototype/mantine`) and group discussion.
 
-**Why Shadcn over Mantine:**
+**Notes from Prototype Comparison:**
 
-| Requirement | Shadcn | Mantine |
-|-------------|--------|---------|
-| Component ownership | Yes - Copy to codebase | No - npm dependency |
-| Styling approach | Tailwind CSS | CSS-in-JS (emotion) |
-| Bundle size | Minimal - Only used components | Larger - Full library |
-| Customization | Full control - Edit source directly | Theme config only |
-| Dark mode | CSS variables | Context provider |
+Shadcn lacks layout components, requiring extensive Tailwind class management for containers, spacing, and alignment. This adds friction and cognitive load, based on our experiences with the current Inspector. Mantine's layout components (`Flex`, `Stack`, etc.) make the code more concise and easier to understand.
+
+Although the code may be less directly customizable, we don't expect  extensive theming or branding to be a priority for Inspector as a debugging tool.
+
+See [PR #980 discussion](https://github.com/modelcontextprotocol/inspector/pull/980#issuecomment-3667102518) for example code comparison.
+
+| Requirement | Mantine | Shadcn |
+|-------------|---------|--------|
+| Layout components | Yes - Flex, Stack, Group, Grid | No - Use Tailwind divs |
+| Out-of-box experience | Yes - Comprehensive | Partial - Assemble yourself |
+| Code verbosity | Concise JSX props | Verbose Tailwind classes |
+| Styling approach | Props + theme config | Tailwind utility classes |
+| Documentation | Extensive API docs | Component examples |
 
 **Benefits:**
 
-1. **Component Ownership** - Components are copied into your project, not installed as dependencies. This means:
-   - More control over implementation details
-   - Easier to modify for project-specific needs
+1. **Built-in Layout Components** - Mantine provides layout primitives as JSX components:
+   - `Flex`, `Stack`, `Group`, `Grid`, `Center`, `Container`
+   - No need to manage `div` elements with Tailwind classes
+   - More declarative, readable code
 
-2. **Tailwind CSS Integration**:
-   - Theme customization via CSS variables
-   - Smaller production bundles (unused styles purged)
+2. **Reduced Class Management** - Compare the same UI element:
+   ```tsx
+   // Mantine - concise
+   <Alert icon={<IconAlertTriangle />} color="yellow" title="Warning">
+     {message}
+   </Alert>
 
-3. **Simpler Theme Architecture** - CSS variables for theming:
-   - Light/dark mode via CSS class toggle
-   - Easy to extend with custom color schemes
-   - Works seamlessly with Tailwind
+   // Shadcn + Tailwind - verbose class strings
+   <div className="flex items-start gap-3 rounded-lg border border-yellow-200
+     bg-yellow-50 p-4 text-yellow-800 dark:border-yellow-900 dark:bg-yellow-950
+     dark:text-yellow-200">
+     <IconAlertTriangle className="h-5 w-5 flex-shrink-0" />
+     <div className="flex-1"><p className="font-medium">Warning</p>{message}</div>
+   </div>
+   ```
 
-4. **Developer Experience from Prototype**:
-   - Faster iteration when modifying components
-   - More readable component code
-   - Easier debugging (source is in your project)
-
-**Tradeoffs:**
-
-- **Initial setup** - Requires adding components individually (vs Mantine's single install)
-- **Less "batteries included"** - Some advanced features need additional work (e.g., date pickers, rich text)
-- **Documentation** - Mantine has more extensive API docs for each prop
-
-**Prototype Comparison:**
-
-Both prototypes implement the same V2 UX spec. Key observations:
-
-| Aspect | Shadcn Prototype | Mantine Prototype |
-|--------|------------------|-------------------|
-| Code clarity | Component code visible in project | Abstracted in node_modules |
-| Theme toggle | CSS class swap | useMantineColorScheme hook |
-| Custom styling | Add Tailwind classes directly | Override with sx prop or styles API |
-| Component modification | Edit the file | Create wrapper or fork |
+3. **Better Out-of-Box Experience**:
+   - Single install provides all components
+   - Consistent API across all components
 
 ## Proxy Server
 ### Language and Runtime

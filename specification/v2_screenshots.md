@@ -5,7 +5,9 @@
 
 ---
 
-This document provides visual screenshots of the **Shadcn UI prototype** implementation. These complement the ASCII wireframes in the UX specification documents.
+This document provides visual screenshots from the **Shadcn UI prototype** (`v2/prototype/shadcn`). These complement the ASCII wireframes in the UX specification documents.
+
+**Note:** The V2 implementation will use **Mantine** (see [V2 Tech Stack](v2_tech_stack.md#mantine-rationale)). These Shadcn screenshots remain as historical reference showing how the UX spec translates to a working UI. The Mantine implementation will have the same screens and functionality with slightly different visual styling.
 
 ## Table of Contents
   * [Server List](#server-list)
@@ -111,6 +113,7 @@ Configure filesystem roots exposed to the connected server.
 
 ## Notes
 
-- All screenshots are from the `v2/prototype/shadcn` branch
+- All screenshots are from the `v2/prototype/shadcn` branch (historical reference)
+- The actual V2 implementation will use Mantine (`v2/prototype/mantine`)
 - Dark theme is supported throughout the application (toggle in header)
 - Screenshots may not reflect the latest implementation - refer to wireframes for authoritative UX
