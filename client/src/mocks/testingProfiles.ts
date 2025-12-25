@@ -15,7 +15,7 @@ export interface TestingProfile {
   autoRespond: boolean;
   defaultResponse?: string;
   defaultModel?: string;
-  defaultStopReason?: 'endTurn' | 'stopSequence' | 'maxTokens';
+  defaultStopReason?: 'endTurn' | 'stopSequence' | 'maxTokens' | 'toolUse';
   modelOverrides?: ModelOverride[];
   elicitationAutoRespond?: boolean;
   elicitationDefaults?: Record<string, unknown>;
