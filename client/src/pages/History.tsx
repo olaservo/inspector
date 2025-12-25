@@ -9,122 +9,21 @@ import {
   Button,
   TextInput,
   Select,
-  Code,
   ScrollArea,
-  Collapse,
+  Switch,
 } from '@mantine/core';
 import {
-  IconChevronDown,
-  IconChevronUp,
-  IconPin,
   IconPinnedOff,
   IconDownload,
+  IconList,
+  IconHierarchy,
 } from '@tabler/icons-react';
 import { initialHistory, type HistoryEntry } from '@/mocks';
+import { HistoryTreeNode } from '@/components/HistoryTreeNode';
+import { getRootEntries, buildChildrenMap } from '@/lib/historyUtils';
 
 // Pagination page size
 const PAGE_SIZE = 10;
-
-interface HistoryCardProps {
-  entry: HistoryEntry;
-  expanded: boolean;
-  onToggleExpand: () => void;
-  onTogglePin: () => void;
-}
-
-function HistoryCard({ entry, expanded, onToggleExpand, onTogglePin }: HistoryCardProps) {
-  return (
-    <Card
-      withBorder
-      style={entry.pinned ? { borderColor: 'var(--mantine-color-yellow-5)', borderWidth: 1 } : undefined}
-    >
-      <Stack gap="sm" p="md">
-        {/* Header row */}
-        <Group justify="space-between">
-          <Group gap="sm">
-            {entry.pinned && <Text c="yellow">*</Text>}
-            <Text size="sm" c="dimmed" ff="monospace">
-              {new Date(entry.timestamp).toLocaleTimeString()}
-            </Text>
-            <Badge variant="light" size="sm">
-              {entry.method}
-            </Badge>
-            {entry.target && <Text size="sm" fw={500}>{entry.target}</Text>}
-          </Group>
-          <Group gap="sm">
-            <Badge color={entry.success ? 'green' : 'red'} size="sm">
-              {entry.success ? 'OK' : 'Error'}
-            </Badge>
-            <Text size="sm" c="dimmed">{entry.duration}ms</Text>
-          </Group>
-        </Group>
-
-        {/* Parameters (always visible if present) */}
-        {entry.params && Object.keys(entry.params).length > 0 && (
-          <Text size="sm">
-            <Text span c="dimmed">Parameters: </Text>
-            <Code>{JSON.stringify(entry.params)}</Code>
-          </Text>
-        )}
-
-        {/* Metadata row: SSE ID, Progress Token */}
-        {(entry.sseId || entry.progressToken) && (
-          <Group gap="lg">
-            {entry.sseId && (
-              <Text size="xs" c="dimmed">
-                SSE ID: <Code>{entry.sseId}</Code>
-              </Text>
-            )}
-            {entry.progressToken && (
-              <Text size="xs" c="dimmed">
-                Progress Token: <Code>{entry.progressToken}</Code>
-              </Text>
-            )}
-          </Group>
-        )}
-
-        {/* Expandable response section with Collapse */}
-        <Collapse in={expanded}>
-          {entry.response && (
-            <Stack gap="xs" pt="sm" style={{ borderTop: '1px solid var(--mantine-color-dark-4)' }}>
-              <Text size="sm" c="dimmed">Response:</Text>
-              <Code block style={{ maxHeight: 192, overflow: 'auto' }}>
-                {JSON.stringify(entry.response, null, 2)}
-              </Code>
-            </Stack>
-          )}
-        </Collapse>
-
-        {/* Actions row */}
-        <Group justify="space-between" pt="xs">
-          <Group gap="xs">
-            <Button variant="subtle" size="xs">
-              Replay
-            </Button>
-            <Button
-              variant="subtle"
-              size="xs"
-              onClick={onTogglePin}
-              leftSection={entry.pinned ? <IconPinnedOff size={14} /> : <IconPin size={14} />}
-            >
-              {entry.pinned ? 'Unpin' : 'Pin'}
-            </Button>
-          </Group>
-          {entry.response && (
-            <Button
-              variant="subtle"
-              size="xs"
-              onClick={onToggleExpand}
-              leftSection={expanded ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />}
-            >
-              {expanded ? 'Collapse' : 'Expand'}
-            </Button>
-          )}
-        </Group>
-      </Stack>
-    </Card>
-  );
-}
 
 export function History() {
   const [history, setHistory] = useState<HistoryEntry[]>(initialHistory);
@@ -132,6 +31,7 @@ export function History() {
   const [searchFilter, setSearchFilter] = useState('');
   const [methodFilter, setMethodFilter] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [showNested, setShowNested] = useState(true);
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -159,7 +59,7 @@ export function History() {
 
   // Export history as JSON
   const handleExport = () => {
-    const dataStr = JSON.stringify(filteredHistory, null, 2);
+    const dataStr = JSON.stringify(history, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
     const link = document.createElement('a');
     link.setAttribute('href', dataUri);
@@ -174,8 +74,11 @@ export function History() {
     setVisibleCount((prev) => prev + PAGE_SIZE);
   };
 
-  // Filter history
-  const filteredHistory = history.filter((entry) => {
+  // Build children map for tree view
+  const childrenMap = buildChildrenMap(history);
+
+  // Filter function for entries
+  const matchesFilter = (entry: HistoryEntry) => {
     const matchesSearch =
       searchFilter === '' ||
       entry.method.toLowerCase().includes(searchFilter.toLowerCase()) ||
@@ -183,9 +86,23 @@ export function History() {
       JSON.stringify(entry.params).toLowerCase().includes(searchFilter.toLowerCase());
     const matchesMethod = !methodFilter || methodFilter === 'all' || entry.method === methodFilter;
     return matchesSearch && matchesMethod;
-  });
+  };
 
-  // Separate pinned and unpinned
+  // Get entries to display based on view mode
+  const getDisplayEntries = () => {
+    if (showNested) {
+      // In nested mode, only show root entries (parents)
+      // Children will be rendered as part of their parent's tree
+      return getRootEntries(history).filter(matchesFilter);
+    } else {
+      // In flat mode, show all entries that match the filter
+      return history.filter(matchesFilter);
+    }
+  };
+
+  const filteredHistory = getDisplayEntries();
+
+  // Separate pinned and unpinned (only root/primary requests can be pinned)
   const pinnedEntries = filteredHistory.filter((entry) => entry.pinned);
   const unpinnedEntries = filteredHistory.filter((entry) => !entry.pinned);
 
@@ -221,7 +138,17 @@ export function History() {
                   { value: 'tools/list', label: 'tools/list' },
                   { value: 'resources/read', label: 'resources/read' },
                   { value: 'prompts/get', label: 'prompts/get' },
+                  { value: 'sampling/createMessage', label: 'sampling' },
+                  { value: 'elicitation/create', label: 'elicitation' },
                 ]}
+              />
+              <Switch
+                size="sm"
+                checked={showNested}
+                onChange={(e) => setShowNested(e.currentTarget.checked)}
+                label="Nested"
+                onLabel={<IconHierarchy size={12} />}
+                offLabel={<IconList size={12} />}
               />
               <Button
                 variant="outline"
@@ -247,10 +174,12 @@ export function History() {
           </Card>
         ) : (
           <Stack gap="sm">
-            {visibleUnpinnedEntries.map((entry) => (
-              <HistoryCard
+            {visibleUnpinnedEntries.map((entry, index) => (
+              <HistoryTreeNode
                 key={entry.id}
                 entry={entry}
+                children={showNested ? (childrenMap.get(entry.id) ?? []) : []}
+                isLast={index === visibleUnpinnedEntries.length - 1}
                 expanded={expandedIds.has(entry.id)}
                 onToggleExpand={() => toggleExpand(entry.id)}
                 onTogglePin={() => togglePin(entry.id)}
