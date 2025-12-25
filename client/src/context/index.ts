@@ -4,6 +4,8 @@ export {
   useExecution,
   useActiveProfile,
   usePendingRequestsCount,
+  useCurrentPendingRequest,
+  useResolvedRequestsCount,
   generateRequestId,
   generateClientRequestId,
   type ExecutionState,

@@ -13,28 +13,123 @@ import {
 } from '@mantine/core';
 import { ListChangedIndicator } from '../components/ListChangedIndicator';
 import { AnnotationBadges } from '../components/AnnotationBadges';
-import { mockTools, type Tool } from '@/mocks';
+import { PendingClientRequestsPanel } from '../components/PendingClientRequestsPanel';
+import { mockTools, mockSamplingRequest, mockFormRequest, type Tool } from '@/mocks';
+import {
+  useExecution,
+  useActiveProfile,
+  generateRequestId,
+  generateClientRequestId,
+} from '@/context';
+import type { SamplingResponse } from '../components/SamplingRequestCard';
 
 export function Tools() {
   const [hasToolsChanged, setHasToolsChanged] = useState(true);
   const [selectedTool, setSelectedTool] = useState<Tool>(mockTools[0]);
-  const [isExecuting, setIsExecuting] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
+  const [toolResult, setToolResult] = useState<string | null>(null);
+
+  // Use ExecutionContext for execution state
+  const { state, dispatch } = useExecution();
+  const activeProfile = useActiveProfile();
+  const isExecuting = state.isExecuting;
 
   const handleRefresh = () => {
     setHasToolsChanged(false);
   };
 
   const handleExecute = () => {
-    setIsExecuting(true);
-    // Simulate execution completing
+    const requestId = generateRequestId();
+    dispatch({ type: 'START_EXECUTION', requestId });
+    setToolResult(null);
+
+    // Simulate server sending a sampling request after 300ms
     setTimeout(() => {
-      setIsExecuting(false);
-    }, 500);
+      dispatch({
+        type: 'ADD_CLIENT_REQUEST',
+        request: {
+          id: generateClientRequestId(requestId, 'sampling', 0),
+          type: 'sampling',
+          parentRequestId: requestId,
+          request: mockSamplingRequest,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+        },
+      });
+    }, 300);
+
+    // Optionally add an elicitation request after another delay (for demo)
+    setTimeout(() => {
+      dispatch({
+        type: 'ADD_CLIENT_REQUEST',
+        request: {
+          id: generateClientRequestId(requestId, 'elicitation', 1),
+          type: 'elicitation',
+          parentRequestId: requestId,
+          request: mockFormRequest,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+        },
+      });
+    }, 400);
   };
 
   const handleCancel = () => {
-    setIsExecuting(false);
+    dispatch({ type: 'CANCEL_EXECUTION' });
+    setToolResult(null);
+  };
+
+  const handleProfileChange = (profileId: string) => {
+    dispatch({ type: 'SET_ACTIVE_PROFILE', profileId });
+  };
+
+  const handleResolveSampling = (requestId: string, response: SamplingResponse) => {
+    dispatch({
+      type: 'UPDATE_CLIENT_REQUEST',
+      id: requestId,
+      status: 'completed',
+      response,
+    });
+    dispatch({ type: 'REMOVE_CLIENT_REQUEST', id: requestId });
+    checkExecutionComplete();
+  };
+
+  const handleResolveElicitation = (requestId: string, data: Record<string, unknown>) => {
+    dispatch({
+      type: 'UPDATE_CLIENT_REQUEST',
+      id: requestId,
+      status: 'completed',
+      response: data,
+    });
+    dispatch({ type: 'REMOVE_CLIENT_REQUEST', id: requestId });
+    checkExecutionComplete();
+  };
+
+  const handleReject = (requestId: string) => {
+    dispatch({
+      type: 'UPDATE_CLIENT_REQUEST',
+      id: requestId,
+      status: 'rejected',
+    });
+    dispatch({ type: 'REMOVE_CLIENT_REQUEST', id: requestId });
+    checkExecutionComplete();
+  };
+
+  const checkExecutionComplete = () => {
+    // Check if all requests are resolved (after this update)
+    // We use setTimeout to let the state update first
+    setTimeout(() => {
+      if (state.pendingClientRequests.length <= 1) {
+        dispatch({ type: 'END_EXECUTION' });
+        setToolResult(JSON.stringify(
+          {
+            content: [{ type: 'text', text: 'Tool execution completed successfully!' }],
+          },
+          null,
+          2
+        ));
+      }
+    }, 0);
   };
 
   const filteredTools = mockTools.filter((tool) =>
@@ -158,33 +253,46 @@ export function Tools() {
       {/* Results Panel (4/12) */}
       <Grid.Col span={4}>
         <Card h="100%" withBorder>
-          <Stack gap="md" p="md">
-            <Title order={4}>Results</Title>
-            <ScrollArea flex={1} mah="60vh">
-              <Code block>
-                {JSON.stringify(
-                  {
-                    content: [
-                      {
-                        type: 'text',
-                        text: 'Hello, world!',
-                      },
-                    ],
-                  },
-                  null,
-                  2
-                )}
-              </Code>
-            </ScrollArea>
-            <Group gap="sm">
-              <Button variant="outline" size="xs">
-                Copy
-              </Button>
-              <Button variant="outline" size="xs">
-                Clear
-              </Button>
-            </Group>
-          </Stack>
+          {state.pendingClientRequests.length > 0 ? (
+            <PendingClientRequestsPanel
+              requests={state.pendingClientRequests}
+              activeProfile={activeProfile}
+              profiles={state.profiles}
+              onProfileChange={handleProfileChange}
+              onResolveSampling={handleResolveSampling}
+              onResolveElicitation={handleResolveElicitation}
+              onReject={handleReject}
+              onCancelTool={handleCancel}
+            />
+          ) : (
+            <Stack gap="md" p="md">
+              <Title order={4}>Results</Title>
+              <ScrollArea flex={1} mah="60vh">
+                <Code block>
+                  {toolResult || JSON.stringify(
+                    {
+                      content: [
+                        {
+                          type: 'text',
+                          text: 'Execute a tool to see results here.',
+                        },
+                      ],
+                    },
+                    null,
+                    2
+                  )}
+                </Code>
+              </ScrollArea>
+              <Group gap="sm">
+                <Button variant="outline" size="xs">
+                  Copy
+                </Button>
+                <Button variant="outline" size="xs" onClick={() => setToolResult(null)}>
+                  Clear
+                </Button>
+              </Group>
+            </Stack>
+          )}
         </Card>
       </Grid.Col>
     </Grid>

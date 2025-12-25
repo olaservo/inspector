@@ -205,3 +205,17 @@ export function generateClientRequestId(
 ): string {
   return `${parentId}-${type}-${index}`;
 }
+
+// Helper hook to get current (first pending) request
+export function useCurrentPendingRequest(): PendingClientRequest | undefined {
+  const { state } = useExecution();
+  return state.pendingClientRequests.find((r) => r.status === 'pending');
+}
+
+// Helper hook to get count of resolved (completed or rejected) requests
+export function useResolvedRequestsCount(): number {
+  const { state } = useExecution();
+  return state.pendingClientRequests.filter(
+    (r) => r.status === 'completed' || r.status === 'rejected'
+  ).length;
+}
