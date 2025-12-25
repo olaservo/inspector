@@ -1,3 +1,6 @@
+// Request type discriminator for hierarchical display
+export type RequestType = 'primary' | 'client';
+
 export interface HistoryEntry {
   id: string;
   timestamp: string;
@@ -11,9 +14,72 @@ export interface HistoryEntry {
   label?: string;
   sseId?: string;
   progressToken?: string;
+  // Hierarchical request trace fields
+  requestType?: RequestType; // 'primary' for tool/resource/prompt calls, 'client' for sampling/elicitation
+  parentRequestId?: string; // For client requests, links to parent tool call
+  childRequestIds?: string[]; // For primary requests, links to triggered client requests
+  relativeTime?: number; // Offset from parent request start (ms), for client requests
 }
 
 export const initialHistory: HistoryEntry[] = [
+  // Primary request with child sampling requests (hierarchical example)
+  {
+    id: 'req-0',
+    timestamp: '2025-11-30T14:25:00Z',
+    method: 'tools/call',
+    target: 'analyze_data',
+    params: { query: 'SELECT * FROM users LIMIT 10' },
+    response: { content: [{ type: 'text', text: 'Analysis complete. Found 10 users.' }] },
+    duration: 2500,
+    success: true,
+    pinned: false,
+    sseId: 'evt-12346',
+    progressToken: 'prog-xyz789',
+    requestType: 'primary',
+    childRequestIds: ['req-0-sampling-1', 'req-0-elicit-1'],
+  },
+  // Child sampling request
+  {
+    id: 'req-0-sampling-1',
+    timestamp: '2025-11-30T14:25:00.012Z',
+    method: 'sampling/createMessage',
+    target: null,
+    params: {
+      messages: [{ role: 'user', content: { type: 'text', text: 'Analyze this data' } }],
+      maxTokens: 1000,
+    },
+    response: {
+      model: 'claude-3-sonnet-20241022',
+      content: { type: 'text', text: 'Based on the data, I can see...' },
+      stopReason: 'endTurn',
+    },
+    duration: 200,
+    success: true,
+    pinned: false,
+    requestType: 'client',
+    parentRequestId: 'req-0',
+    relativeTime: 12,
+  },
+  // Child elicitation request
+  {
+    id: 'req-0-elicit-1',
+    timestamp: '2025-11-30T14:25:00.250Z',
+    method: 'elicitation/create',
+    target: null,
+    params: {
+      mode: 'form',
+      message: 'Confirm data export settings',
+      schema: { properties: { format: { type: 'string', enum: ['json', 'csv'] } } },
+    },
+    response: { format: 'json' },
+    duration: 1500,
+    success: true,
+    pinned: false,
+    requestType: 'client',
+    parentRequestId: 'req-0',
+    relativeTime: 250,
+  },
+  // Simple primary request (no children)
   {
     id: 'req-1',
     timestamp: '2025-11-30T14:24:12Z',
@@ -26,6 +92,7 @@ export const initialHistory: HistoryEntry[] = [
     pinned: true,
     label: 'Test echo',
     sseId: 'evt-12345',
+    requestType: 'primary',
   },
   {
     id: 'req-2',
@@ -38,6 +105,7 @@ export const initialHistory: HistoryEntry[] = [
     success: true,
     pinned: false,
     sseId: 'evt-12344',
+    requestType: 'primary',
   },
   {
     id: 'req-3',
@@ -52,6 +120,7 @@ export const initialHistory: HistoryEntry[] = [
     label: 'Get config',
     sseId: 'evt-12343',
     progressToken: 'prog-abc123',
+    requestType: 'primary',
   },
   {
     id: 'req-4',
@@ -63,5 +132,6 @@ export const initialHistory: HistoryEntry[] = [
     duration: 0,
     success: false,
     pinned: false,
+    requestType: 'primary',
   },
 ];

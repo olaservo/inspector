@@ -8,3 +8,4 @@ export * from './history';
 export * from './tasks';
 export * from './auth';
 export * from './capabilities';
+export * from './testingProfiles';
