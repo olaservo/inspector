@@ -1,3 +1,5 @@
+import type { ToolDefinition, ToolChoice } from '@/types/responses';
+
 // OAuth State
 export interface OAuthState {
   authorizationUrl?: string;
@@ -63,6 +65,9 @@ export interface SamplingRequest {
   stopSequences?: string[];
   temperature?: number;
   includeContext?: 'none' | 'thisServer' | 'allServers';
+  // Tool calling support (MCP 2025-11-25)
+  tools?: ToolDefinition[];
+  toolChoice?: ToolChoice;
 }
 
 export const mockSamplingRequest: SamplingRequest = {
@@ -93,6 +98,64 @@ export const mockSamplingRequest: SamplingRequest = {
   stopSequences: ['\\n\\n', 'END'],
   temperature: undefined,
   includeContext: 'thisServer',
+};
+
+// Mock sampling request with tool calling (MCP 2025-11-25)
+export const mockSamplingWithToolsRequest: SamplingRequest = {
+  messages: [
+    {
+      role: 'user',
+      content: {
+        type: 'text',
+        text: "What's the weather in Paris and London? Also check if there are any travel advisories.",
+      },
+    },
+  ],
+  modelPreferences: {
+    hints: ['claude-3-sonnet'],
+    speedPriority: 0.7,
+    intelligencePriority: 0.9,
+  },
+  maxTokens: 2000,
+  includeContext: 'thisServer',
+  tools: [
+    {
+      name: 'get_weather',
+      description: 'Get current weather conditions for a city',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          city: { type: 'string', description: 'City name' },
+          units: { type: 'string', enum: ['celsius', 'fahrenheit'] },
+        },
+        required: ['city'],
+      },
+    },
+    {
+      name: 'get_forecast',
+      description: 'Get multi-day weather forecast for a city',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          city: { type: 'string', description: 'City name' },
+          days: { type: 'number', description: 'Number of days (1-7)' },
+        },
+        required: ['city'],
+      },
+    },
+    {
+      name: 'check_travel_advisory',
+      description: 'Check travel advisories for a country or region',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          country: { type: 'string', description: 'Country name or code' },
+        },
+        required: ['country'],
+      },
+    },
+  ],
+  toolChoice: { type: 'auto' },
 };
 
 // Elicitation types

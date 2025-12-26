@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   IconCopy,
   IconCheck,
   IconPhoto,
   IconAlertTriangle,
+  IconPlus,
+  IconX,
 } from '@tabler/icons-react';
 import {
   Modal,
@@ -22,11 +24,16 @@ import {
   Divider,
   ScrollArea,
 } from '@mantine/core';
-import { mockSamplingRequest, type SamplingMessage, type SamplingRequest } from '@/mocks';
+import { mockSamplingRequest, type SamplingMessage, type SamplingRequest, mockTestingProfiles, getResponseForModelHint } from '@/mocks';
+import { useExecution, useActiveProfile } from '@/context';
+import { TestingProfileSelector } from './TestingProfileSelector';
+import type { SamplingResponse, ToolCall, ToolChoice, StopReason } from '@/types/responses';
 
 interface SamplingModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  request?: SamplingRequest;
+  onResponse?: (response: SamplingResponse) => void;
 }
 
 function PriorityBar({ value, label }: { value: number; label: string }) {
@@ -46,6 +53,17 @@ function PriorityBar({ value, label }: { value: number; label: string }) {
       </Text>
     </Group>
   );
+}
+
+function formatToolChoice(choice?: ToolChoice): string {
+  if (!choice) return 'auto (default)';
+  switch (choice.type) {
+    case 'auto': return 'auto (model decides)';
+    case 'none': return 'none (no tools)';
+    case 'required': return 'required (must use tool)';
+    case 'tool': return `specific: ${choice.name}`;
+    default: return 'auto';
+  }
 }
 
 function MessageDisplay({ message }: { message: SamplingMessage }) {
@@ -68,15 +86,34 @@ function MessageDisplay({ message }: { message: SamplingMessage }) {
   );
 }
 
-export function SamplingModal({ open, onOpenChange }: SamplingModalProps) {
+export function SamplingModal({ open, onOpenChange, request: propRequest, onResponse }: SamplingModalProps) {
+  const { state, dispatch } = useExecution();
+  const activeProfile = useActiveProfile();
+  const request: SamplingRequest = propRequest ?? mockSamplingRequest;
+
   const [response, setResponse] = useState(
     'Based on the data chart, I can see several key trends:\n\n1. Revenue has increased 25% quarter-over-quarter\n2. User engagement peaks on Tuesdays\n3. Mobile usage continues to grow at 15% monthly'
   );
   const [modelUsed, setModelUsed] = useState('claude-3-sonnet-20241022');
-  const [stopReason, setStopReason] = useState('endTurn');
+  const [stopReason, setStopReason] = useState<StopReason>('endTurn');
   const [copied, setCopied] = useState(false);
+  const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
 
-  const request: SamplingRequest = mockSamplingRequest;
+  // Sync with active profile when it changes
+  useEffect(() => {
+    if (activeProfile && open) {
+      const profileResponse = getResponseForModelHint(activeProfile, request.modelPreferences?.hints);
+      if (profileResponse) {
+        setResponse(profileResponse);
+      }
+      if (activeProfile.defaultModel) {
+        setModelUsed(activeProfile.defaultModel);
+      }
+      if (activeProfile.defaultStopReason) {
+        setStopReason(activeProfile.defaultStopReason);
+      }
+    }
+  }, [activeProfile?.id, open]);
 
   const handleCopyResponse = async () => {
     await navigator.clipboard.writeText(response);
@@ -90,12 +127,34 @@ export function SamplingModal({ open, onOpenChange }: SamplingModalProps) {
   };
 
   const handleSendResponse = () => {
-    console.log('Sending sampling response:', {
+    const samplingResponse: SamplingResponse = {
       content: { type: 'text', text: response },
       model: modelUsed,
       stopReason,
-    });
+      toolCalls: stopReason === 'toolUse' && toolCalls.length > 0 ? toolCalls : undefined,
+    };
+    console.log('Sending sampling response:', samplingResponse);
+    onResponse?.(samplingResponse);
     onOpenChange(false);
+  };
+
+  const handleAddToolCall = () => {
+    const newCall: ToolCall = {
+      id: `call-${Date.now()}`,
+      name: request.tools?.[0]?.name || '',
+      arguments: {},
+    };
+    setToolCalls([...toolCalls, newCall]);
+  };
+
+  const handleRemoveToolCall = (index: number) => {
+    setToolCalls(toolCalls.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateToolCall = (index: number, updates: Partial<ToolCall>) => {
+    const updated = [...toolCalls];
+    updated[index] = { ...updated[index], ...updates };
+    setToolCalls(updated);
   };
 
   return (
@@ -110,6 +169,17 @@ export function SamplingModal({ open, onOpenChange }: SamplingModalProps) {
         <Text size="sm" c="dimmed">
           The server is requesting an LLM completion.
         </Text>
+
+        {/* Testing Profile Selector */}
+        <Group justify="space-between">
+          <Text fw={500}>Testing Profile:</Text>
+          <TestingProfileSelector
+            profiles={mockTestingProfiles}
+            activeProfileId={state.activeProfileId}
+            onChange={(id) => dispatch({ type: 'SET_ACTIVE_PROFILE', profileId: id })}
+            size="sm"
+          />
+        </Group>
 
         {/* Messages */}
         <div>
@@ -202,6 +272,37 @@ export function SamplingModal({ open, onOpenChange }: SamplingModalProps) {
           </Group>
         </div>
 
+        {/* Tools (if present) */}
+        {request.tools && request.tools.length > 0 && (
+          <div>
+            <Text fw={500} mb="xs">
+              Available Tools ({request.tools.length}):
+            </Text>
+            <Card withBorder p="sm">
+              <Stack gap="xs">
+                {request.tools.map((tool, idx) => (
+                  <Group key={idx} gap="xs" wrap="nowrap">
+                    <Badge variant="outline" size="sm" style={{ flexShrink: 0 }}>
+                      {tool.name}
+                    </Badge>
+                    {tool.description && (
+                      <Text size="xs" c="dimmed" lineClamp={1}>
+                        {tool.description}
+                      </Text>
+                    )}
+                  </Group>
+                ))}
+              </Stack>
+            </Card>
+            <Group gap="xs" mt="xs">
+              <Text size="sm" c="dimmed">Tool Choice:</Text>
+              <Badge variant="light" size="sm">
+                {formatToolChoice(request.toolChoice)}
+              </Badge>
+            </Group>
+          </div>
+        )}
+
         {/* Include Context */}
         <Group gap="xs">
           <Checkbox
@@ -247,7 +348,7 @@ export function SamplingModal({ open, onOpenChange }: SamplingModalProps) {
           <Select
             label="Stop Reason:"
             value={stopReason}
-            onChange={(v) => setStopReason(v || 'endTurn')}
+            onChange={(v) => setStopReason((v as StopReason) || 'endTurn')}
             data={[
               { value: 'endTurn', label: 'endTurn' },
               { value: 'stopSequence', label: 'stopSequence' },
@@ -256,6 +357,67 @@ export function SamplingModal({ open, onOpenChange }: SamplingModalProps) {
             ]}
           />
         </Group>
+
+        {/* Tool Calls (when stopReason is toolUse and tools are available) */}
+        {stopReason === 'toolUse' && request.tools && request.tools.length > 0 && (
+          <div>
+            <Group justify="space-between" mb="xs">
+              <Text fw={500}>Tool Calls Requested:</Text>
+              <Button
+                size="xs"
+                variant="subtle"
+                leftSection={<IconPlus size={14} />}
+                onClick={handleAddToolCall}
+              >
+                Add Tool Call
+              </Button>
+            </Group>
+            <Card withBorder p="sm">
+              <Stack gap="sm">
+                {toolCalls.length === 0 ? (
+                  <Text size="sm" c="dimmed">
+                    No tool calls. Add tool calls or change stop reason.
+                  </Text>
+                ) : (
+                  toolCalls.map((call, idx) => (
+                    <Group key={call.id} gap="xs" wrap="nowrap">
+                      <Select
+                        size="xs"
+                        placeholder="Select tool"
+                        value={call.name}
+                        onChange={(v) => handleUpdateToolCall(idx, { name: v || '' })}
+                        data={request.tools?.map(t => ({ value: t.name, label: t.name })) || []}
+                        style={{ width: 150 }}
+                      />
+                      <TextInput
+                        size="xs"
+                        placeholder='{"arg": "value"}'
+                        value={JSON.stringify(call.arguments)}
+                        onChange={(e) => {
+                          try {
+                            const args = JSON.parse(e.target.value);
+                            handleUpdateToolCall(idx, { arguments: args });
+                          } catch {
+                            // Ignore parse errors while typing
+                          }
+                        }}
+                        style={{ flex: 1 }}
+                      />
+                      <ActionIcon
+                        size="sm"
+                        variant="subtle"
+                        color="red"
+                        onClick={() => handleRemoveToolCall(idx)}
+                      >
+                        <IconX size={14} />
+                      </ActionIcon>
+                    </Group>
+                  ))
+                )}
+              </Stack>
+            </Card>
+          </div>
+        )}
 
         {/* Actions */}
         <Group justify="flex-end" mt="md">

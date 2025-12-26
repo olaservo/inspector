@@ -26,17 +26,20 @@ import {
   type ElicitationUrlRequest,
   type ElicitationRequest,
 } from '@/mocks';
+import type { ElicitationResponse } from '@/types/responses';
 
 interface ElicitationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: 'form' | 'url';
+  onSubmit?: (response: ElicitationResponse) => void;
 }
 
 export function ElicitationModal({
   open,
   onOpenChange,
   mode,
+  onSubmit,
 }: ElicitationModalProps) {
   const request: ElicitationRequest =
     mode === 'form' ? mockFormRequest : mockUrlRequest;
@@ -47,6 +50,7 @@ export function ElicitationModal({
         open={open}
         onOpenChange={onOpenChange}
         request={request as ElicitationFormRequest}
+        onSubmit={onSubmit}
       />
     );
   }
@@ -56,6 +60,7 @@ export function ElicitationModal({
       open={open}
       onOpenChange={onOpenChange}
       request={request as ElicitationUrlRequest}
+      onSubmit={onSubmit}
     />
   );
 }
@@ -65,10 +70,12 @@ function ElicitationFormMode({
   open,
   onOpenChange,
   request,
+  onSubmit,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   request: ElicitationFormRequest;
+  onSubmit?: (response: ElicitationResponse) => void;
 }) {
   const [formData, setFormData] = useState<Record<string, string | number>>(() => {
     // Initialize with defaults
@@ -86,12 +93,20 @@ function ElicitationFormMode({
   };
 
   const handleCancel = () => {
-    console.log('Elicitation cancelled - sending declined response');
+    console.log('Elicitation cancelled');
+    onSubmit?.({ action: 'cancel' });
+    onOpenChange(false);
+  };
+
+  const handleDecline = () => {
+    console.log('Elicitation declined');
+    onSubmit?.({ action: 'decline' });
     onOpenChange(false);
   };
 
   const handleSubmit = () => {
     console.log('Elicitation form submitted:', formData);
+    onSubmit?.({ action: 'accept', data: formData });
     onOpenChange(false);
   };
 
@@ -173,6 +188,9 @@ function ElicitationFormMode({
           <Button variant="default" onClick={handleCancel}>
             Cancel
           </Button>
+          <Button variant="outline" color="red" onClick={handleDecline}>
+            Decline
+          </Button>
           <Button onClick={handleSubmit}>Submit</Button>
         </Group>
       </Stack>
@@ -185,10 +203,12 @@ function ElicitationUrlMode({
   open,
   onOpenChange,
   request,
+  onSubmit,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   request: ElicitationUrlRequest;
+  onSubmit?: (response: ElicitationResponse) => void;
 }) {
   const [copied, setCopied] = useState(false);
   const [status] = useState<'waiting' | 'completed'>('waiting');
@@ -204,7 +224,14 @@ function ElicitationUrlMode({
   };
 
   const handleCancel = () => {
-    console.log('Elicitation cancelled - sending declined response');
+    console.log('Elicitation cancelled');
+    onSubmit?.({ action: 'cancel' });
+    onOpenChange(false);
+  };
+
+  const handleDecline = () => {
+    console.log('Elicitation declined');
+    onSubmit?.({ action: 'decline' });
     onOpenChange(false);
   };
 
@@ -307,6 +334,9 @@ function ElicitationUrlMode({
         <Group justify="flex-end">
           <Button variant="default" onClick={handleCancel}>
             Cancel
+          </Button>
+          <Button variant="outline" color="red" onClick={handleDecline}>
+            Decline
           </Button>
         </Group>
       </Stack>

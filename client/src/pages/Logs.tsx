@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Card,
   Stack,
@@ -13,13 +14,16 @@ import {
   Checkbox,
   Menu,
 } from '@mantine/core';
-import { IconCopy, IconChevronDown, IconDownload } from '@tabler/icons-react';
-import { mockLogs, logLevels, levelColors } from '@/mocks';
+import { IconCopy, IconChevronDown, IconDownload, IconExternalLink } from '@tabler/icons-react';
+import { mockLogs, logLevels, levelColors, initialHistory } from '@/mocks';
+import type { RequestInfo } from '@/types/responses';
 
 export function Logs() {
+  const navigate = useNavigate();
   const [logLevel, setLogLevel] = useState<string | null>('debug');
   const [filter, setFilter] = useState('');
   const [autoScroll, setAutoScroll] = useState(true);
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   // All 8 RFC 5424 log levels
   const [visibleLevels, setVisibleLevels] = useState({
     debug: true,
@@ -36,11 +40,67 @@ export function Logs() {
     setVisibleLevels((prev) => ({ ...prev, [level]: !prev[level as keyof typeof prev] }));
   };
 
+  // Get unique requests from logs for the filter dropdown
+  const uniqueRequests = useMemo((): RequestInfo[] => {
+    const requestMap = new Map<string, RequestInfo>();
+
+    mockLogs.forEach(log => {
+      if (log.requestId && !requestMap.has(log.requestId)) {
+        // Find matching history entry for method/target info
+        const historyEntry = initialHistory.find(h => h.id === log.requestId);
+        requestMap.set(log.requestId, {
+          id: log.requestId,
+          method: historyEntry?.method || log.logger,
+          target: historyEntry?.target ?? undefined,
+          timestamp: log.timestamp,
+        });
+      }
+    });
+
+    // Sort by timestamp descending (most recent first)
+    return Array.from(requestMap.values()).sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+  }, []);
+
   const filteredLogs = mockLogs.filter((log) => {
     const matchesFilter = filter === '' || log.message.toLowerCase().includes(filter.toLowerCase());
     const matchesLevel = visibleLevels[log.level as keyof typeof visibleLevels] ?? true;
-    return matchesFilter && matchesLevel;
+
+    // Request chain filtering
+    let matchesRequest = true;
+    if (selectedRequestId) {
+      // Get the parent ID if this is a child request
+      const selectedLog = mockLogs.find(l => l.requestId === selectedRequestId);
+      const parentId = selectedLog?.parentRequestId || selectedRequestId;
+
+      // Include logs that match:
+      // 1. The selected request itself
+      // 2. The parent of the selected request
+      // 3. Any siblings (logs with the same parent)
+      matchesRequest =
+        log.requestId === selectedRequestId ||
+        log.requestId === parentId ||
+        log.parentRequestId === parentId ||
+        log.parentRequestId === selectedRequestId;
+    }
+
+    return matchesFilter && matchesLevel && matchesRequest;
   });
+
+  const handleShowAllLogs = () => {
+    setSelectedRequestId(null);
+    setFilter('');
+  };
+
+  const handleViewInHistory = () => {
+    if (selectedRequestId) {
+      // Find the root request ID for navigation
+      const selectedLog = mockLogs.find(l => l.requestId === selectedRequestId);
+      const rootId = selectedLog?.parentRequestId || selectedRequestId;
+      navigate(`/history?highlight=${rootId}`);
+    }
+  };
 
   // Export as JSON
   const handleExportJson = () => {
@@ -142,6 +202,31 @@ export function Logs() {
               </Stack>
             </Stack>
 
+            {/* Request Filter */}
+            <Stack gap="xs">
+              <Text size="sm" fw={500}>Request Filter</Text>
+              <Select
+                size="sm"
+                placeholder="All requests"
+                value={selectedRequestId}
+                onChange={setSelectedRequestId}
+                clearable
+                data={uniqueRequests.map(req => ({
+                  value: req.id,
+                  label: `${req.target || req.method} (${new Date(req.timestamp).toLocaleTimeString()})`,
+                }))}
+              />
+              {selectedRequestId && (
+                <Button
+                  variant="subtle"
+                  size="xs"
+                  onClick={handleShowAllLogs}
+                >
+                  Show All Logs
+                </Button>
+              )}
+            </Stack>
+
             {/* Actions */}
             <Group gap="sm">
               <Button variant="outline" size="sm" flex={1}>
@@ -183,7 +268,24 @@ export function Logs() {
       <Grid.Col span={9}>
         <Card withBorder h="100%" style={{ display: 'flex', flexDirection: 'column' }}>
           <Group justify="space-between" p="md" style={{ borderBottom: '1px solid var(--mantine-color-dark-4)' }}>
-            <Text fw={600}>Log Stream</Text>
+            <Group gap="md">
+              <Text fw={600}>Log Stream</Text>
+              {selectedRequestId && (
+                <Group gap="xs">
+                  <Text size="sm" c="dimmed">
+                    Filtered: {selectedRequestId}
+                  </Text>
+                  <Button
+                    variant="subtle"
+                    size="xs"
+                    rightSection={<IconExternalLink size={14} />}
+                    onClick={handleViewInHistory}
+                  >
+                    View in History
+                  </Button>
+                </Group>
+              )}
+            </Group>
             <Group gap="lg">
               <Checkbox
                 checked={autoScroll}

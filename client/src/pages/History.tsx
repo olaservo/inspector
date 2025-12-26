@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Card,
   Stack,
@@ -26,12 +27,32 @@ import { getRootEntries, buildChildrenMap } from '@/lib/historyUtils';
 const PAGE_SIZE = 10;
 
 export function History() {
+  const [searchParams] = useSearchParams();
+  const highlightId = searchParams.get('highlight');
+
   const [history, setHistory] = useState<HistoryEntry[]>(initialHistory);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [searchFilter, setSearchFilter] = useState('');
   const [methodFilter, setMethodFilter] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [showNested, setShowNested] = useState(true);
+
+  // Auto-expand and scroll to highlighted entry from query param
+  useEffect(() => {
+    if (highlightId) {
+      // Add the highlighted entry to expanded set
+      setExpandedIds((prev) => {
+        if (prev.has(highlightId)) return prev;
+        const next = new Set(prev);
+        next.add(highlightId);
+        return next;
+      });
+
+      // Clear the highlight param after processing (optional: keeps URL clean)
+      // Uncomment below if you want to clear the param after expansion:
+      // setSearchParams({}, { replace: true });
+    }
+  }, [highlightId]);
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
