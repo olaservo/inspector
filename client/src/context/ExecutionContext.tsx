@@ -58,7 +58,10 @@ export type ExecutionAction =
     }
   | { type: 'REMOVE_CLIENT_REQUEST'; id: string }
   | { type: 'CLEAR_CLIENT_REQUESTS' }
-  | { type: 'SET_ACTIVE_PROFILE'; profileId: string };
+  | { type: 'SET_ACTIVE_PROFILE'; profileId: string }
+  | { type: 'ADD_PROFILE'; profile: TestingProfile }
+  | { type: 'UPDATE_PROFILE'; profile: TestingProfile }
+  | { type: 'DELETE_PROFILE'; profileId: string };
 
 // Initial state
 const initialState: ExecutionState = {
@@ -141,6 +144,33 @@ function executionReducer(
       return {
         ...state,
         activeProfileId: action.profileId,
+      };
+
+    case 'ADD_PROFILE':
+      return {
+        ...state,
+        profiles: [...state.profiles, action.profile],
+      };
+
+    case 'UPDATE_PROFILE':
+      return {
+        ...state,
+        profiles: state.profiles.map((p) =>
+          p.id === action.profile.id ? action.profile : p
+        ),
+      };
+
+    case 'DELETE_PROFILE':
+      // Cannot delete the active profile or the last profile
+      if (
+        action.profileId === state.activeProfileId ||
+        state.profiles.length <= 1
+      ) {
+        return state;
+      }
+      return {
+        ...state,
+        profiles: state.profiles.filter((p) => p.id !== action.profileId),
       };
 
     default:

@@ -24,9 +24,10 @@ import {
   Divider,
   ScrollArea,
 } from '@mantine/core';
-import { mockSamplingRequest, type SamplingMessage, type SamplingRequest, mockTestingProfiles, getResponseForModelHint } from '@/mocks';
+import { mockSamplingRequest, type SamplingMessage, type SamplingRequest, getResponseForModelHint } from '@/mocks';
 import { useExecution, useActiveProfile } from '@/context';
 import { TestingProfileSelector } from './TestingProfileSelector';
+import { TestingProfilesModal } from './TestingProfilesModal';
 import type { SamplingResponse, ToolCall, ToolChoice, StopReason } from '@/types/responses';
 
 interface SamplingModalProps {
@@ -98,6 +99,7 @@ export function SamplingModal({ open, onOpenChange, request: propRequest, onResp
   const [stopReason, setStopReason] = useState<StopReason>('endTurn');
   const [copied, setCopied] = useState(false);
   const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
+  const [editProfilesOpen, setEditProfilesOpen] = useState(false);
 
   // Sync with active profile when it changes
   useEffect(() => {
@@ -173,13 +175,28 @@ export function SamplingModal({ open, onOpenChange, request: propRequest, onResp
         {/* Testing Profile Selector */}
         <Group justify="space-between">
           <Text fw={500}>Testing Profile:</Text>
-          <TestingProfileSelector
-            profiles={mockTestingProfiles}
-            activeProfileId={state.activeProfileId}
-            onChange={(id) => dispatch({ type: 'SET_ACTIVE_PROFILE', profileId: id })}
-            size="sm"
-          />
+          <Group gap="xs">
+            <TestingProfileSelector
+              profiles={state.profiles}
+              activeProfileId={state.activeProfileId}
+              onChange={(id) => dispatch({ type: 'SET_ACTIVE_PROFILE', profileId: id })}
+              size="sm"
+            />
+            <Button
+              variant="subtle"
+              size="xs"
+              onClick={() => setEditProfilesOpen(true)}
+            >
+              Edit Profiles
+            </Button>
+          </Group>
         </Group>
+
+        {/* Testing Profiles Modal */}
+        <TestingProfilesModal
+          opened={editProfilesOpen}
+          onClose={() => setEditProfilesOpen(false)}
+        />
 
         {/* Messages */}
         <div>
