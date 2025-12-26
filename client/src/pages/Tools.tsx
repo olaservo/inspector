@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Grid,
   Card,
@@ -10,6 +10,7 @@ import {
   Title,
   Code,
   Group,
+  Progress,
 } from '@mantine/core';
 import { ListChangedIndicator } from '../components/ListChangedIndicator';
 import { AnnotationBadges } from '../components/AnnotationBadges';
@@ -28,11 +29,25 @@ export function Tools() {
   const [selectedTool, setSelectedTool] = useState<Tool>(mockTools[0]);
   const [searchFilter, setSearchFilter] = useState('');
   const [toolResult, setToolResult] = useState<string | null>(null);
+  const [executionStartTime, setExecutionStartTime] = useState<number | null>(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
 
   // Use ExecutionContext for execution state
   const { state, dispatch } = useExecution();
   const activeProfile = useActiveProfile();
   const isExecuting = state.isExecuting;
+
+  // Update elapsed time every 100ms while executing
+  useEffect(() => {
+    if (isExecuting && executionStartTime) {
+      const interval = setInterval(() => {
+        setElapsedTime(Date.now() - executionStartTime);
+      }, 100);
+      return () => clearInterval(interval);
+    } else if (!isExecuting) {
+      setElapsedTime(0);
+    }
+  }, [isExecuting, executionStartTime]);
 
   const handleRefresh = () => {
     setHasToolsChanged(false);
@@ -42,9 +57,27 @@ export function Tools() {
     const requestId = generateRequestId();
     dispatch({ type: 'START_EXECUTION', requestId });
     setToolResult(null);
+    setExecutionStartTime(Date.now());
+
+    // Simulate progress updates
+    dispatch({
+      type: 'UPDATE_PROGRESS',
+      progress: { current: 0, total: 100, message: 'Initializing tool execution...' },
+    });
+
+    setTimeout(() => {
+      dispatch({
+        type: 'UPDATE_PROGRESS',
+        progress: { current: 25, total: 100, message: 'Sending request to server...' },
+      });
+    }, 200);
 
     // Simulate server sending a sampling request after 300ms
     setTimeout(() => {
+      dispatch({
+        type: 'UPDATE_PROGRESS',
+        progress: { current: 50, total: 100, message: 'Waiting for sampling response...' },
+      });
       dispatch({
         type: 'ADD_CLIENT_REQUEST',
         request: {
@@ -60,6 +93,10 @@ export function Tools() {
 
     // Optionally add an elicitation request after another delay (for demo)
     setTimeout(() => {
+      dispatch({
+        type: 'UPDATE_PROGRESS',
+        progress: { current: 75, total: 100, message: 'Waiting for elicitation response...' },
+      });
       dispatch({
         type: 'ADD_CLIENT_REQUEST',
         request: {
@@ -77,6 +114,7 @@ export function Tools() {
   const handleCancel = () => {
     dispatch({ type: 'CANCEL_EXECUTION' });
     setToolResult(null);
+    setExecutionStartTime(null);
   };
 
   const handleProfileChange = (profileId: string) => {
@@ -246,6 +284,28 @@ export function Tools() {
                 </Button>
               )}
             </Group>
+
+            {/* Progress indicator during execution */}
+            {isExecuting && state.progress && (
+              <Stack gap="xs">
+                <Group justify="space-between">
+                  <Text size="sm" c="dimmed">
+                    {state.progress.message || 'Executing...'}
+                  </Text>
+                  <Text size="sm" c="dimmed">
+                    {(elapsedTime / 1000).toFixed(1)}s
+                  </Text>
+                </Group>
+                <Progress
+                  value={(state.progress.current / state.progress.total) * 100}
+                  size="md"
+                  animated
+                />
+                <Text size="xs" c="dimmed" ta="center">
+                  {state.progress.current}% complete
+                </Text>
+              </Stack>
+            )}
           </Stack>
         </Card>
       </Grid.Col>

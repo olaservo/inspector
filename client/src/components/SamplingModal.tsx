@@ -28,7 +28,7 @@ import { mockSamplingRequest, type SamplingMessage, type SamplingRequest, getRes
 import { useExecution, useActiveProfile } from '@/context';
 import { TestingProfileSelector } from './TestingProfileSelector';
 import { TestingProfilesModal } from './TestingProfilesModal';
-import type { SamplingResponse, ToolCall, ToolChoice, StopReason } from '@/types/responses';
+import type { SamplingResponse, ToolCall, StopReason } from '@/types/responses';
 
 interface SamplingModalProps {
   open: boolean;
@@ -54,17 +54,6 @@ function PriorityBar({ value, label }: { value: number; label: string }) {
       </Text>
     </Group>
   );
-}
-
-function formatToolChoice(choice?: ToolChoice): string {
-  if (!choice) return 'auto (default)';
-  switch (choice.type) {
-    case 'auto': return 'auto (model decides)';
-    case 'none': return 'none (no tools)';
-    case 'required': return 'required (must use tool)';
-    case 'tool': return `specific: ${choice.name}`;
-    default: return 'auto';
-  }
 }
 
 function MessageDisplay({ message }: { message: SamplingMessage }) {
@@ -100,6 +89,11 @@ export function SamplingModal({ open, onOpenChange, request: propRequest, onResp
   const [copied, setCopied] = useState(false);
   const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
   const [editProfilesOpen, setEditProfilesOpen] = useState(false);
+  const [toolChoice, setToolChoice] = useState<string>(
+    request.toolChoice?.type === 'tool'
+      ? `tool:${request.toolChoice.name}`
+      : request.toolChoice?.type || 'auto'
+  );
 
   // Sync with active profile when it changes
   useEffect(() => {
@@ -311,11 +305,23 @@ export function SamplingModal({ open, onOpenChange, request: propRequest, onResp
                 ))}
               </Stack>
             </Card>
-            <Group gap="xs" mt="xs">
+            <Group gap="xs" mt="xs" align="center">
               <Text size="sm" c="dimmed">Tool Choice:</Text>
-              <Badge variant="light" size="sm">
-                {formatToolChoice(request.toolChoice)}
-              </Badge>
+              <Select
+                size="xs"
+                value={toolChoice}
+                onChange={(v) => setToolChoice(v || 'auto')}
+                data={[
+                  { value: 'auto', label: 'auto (model decides)' },
+                  { value: 'none', label: 'none (no tools)' },
+                  { value: 'required', label: 'required (must use tool)' },
+                  ...(request.tools?.map((t) => ({
+                    value: `tool:${t.name}`,
+                    label: `specific: ${t.name}`,
+                  })) || []),
+                ]}
+                style={{ width: 200 }}
+              />
             </Group>
           </div>
         )}
