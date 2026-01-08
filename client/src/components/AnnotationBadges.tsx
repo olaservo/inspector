@@ -1,10 +1,17 @@
 import { Badge, Group } from '@mantine/core';
 
+// Generic annotations type that handles both Tool and Resource annotations
+// Tool: title, readOnlyHint, destructiveHint, idempotentHint, openWorldHint
+// Resource: audience, priority
 export interface Annotations {
-  audience?: string;
-  readOnly?: boolean;
-  destructive?: boolean;
-  longRunning?: boolean;
+  // Tool annotations
+  title?: string;
+  readOnlyHint?: boolean;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  openWorldHint?: boolean;
+  // Resource annotations
+  audience?: string[] | string;
   priority?: number;
 }
 
@@ -26,24 +33,37 @@ export function AnnotationBadges({ annotations, className }: AnnotationBadgesPro
 
   return (
     <Group gap={4} className={className}>
-      {annotations.audience && (
-        <Badge size="xs" variant="light">
-          {annotations.audience}
-        </Badge>
-      )}
-      {annotations.readOnly && (
+      {annotations.readOnlyHint && (
         <Badge size="xs" color="blue">
           read-only
         </Badge>
       )}
-      {annotations.destructive && (
+      {annotations.destructiveHint && (
         <Badge size="xs" color="red">
           destructive
         </Badge>
       )}
-      {annotations.longRunning && (
-        <Badge size="xs" color="yellow">
-          long-run
+      {annotations.idempotentHint && (
+        <Badge size="xs" color="green">
+          idempotent
+        </Badge>
+      )}
+      {annotations.openWorldHint && (
+        <Badge size="xs" color="grape">
+          open-world
+        </Badge>
+      )}
+      {annotations.title && (
+        <Badge size="xs" variant="outline">
+          {annotations.title}
+        </Badge>
+      )}
+      {/* Resource annotations */}
+      {annotations.audience && (
+        <Badge size="xs" variant="light">
+          {Array.isArray(annotations.audience)
+            ? annotations.audience.join(', ')
+            : annotations.audience}
         </Badge>
       )}
       {annotations.priority !== undefined && (

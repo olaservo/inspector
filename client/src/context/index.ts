@@ -15,3 +15,14 @@ export {
   type ClientRequestType,
   type ClientRequestStatus,
 } from './ExecutionContext';
+
+export {
+  McpProvider,
+  useMcp,
+  useConnectionState,
+  useServerInfo,
+  useServerCapability,
+  type ConnectionState,
+  type ConnectionOptions,
+  type ConnectionError,
+} from './McpContext';
