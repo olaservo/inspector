@@ -93,19 +93,16 @@ function ElicitationFormMode({
   };
 
   const handleCancel = () => {
-    console.log('Elicitation cancelled');
     onSubmit?.({ action: 'cancel' });
     onOpenChange(false);
   };
 
   const handleDecline = () => {
-    console.log('Elicitation declined');
     onSubmit?.({ action: 'decline' });
     onOpenChange(false);
   };
 
   const handleSubmit = () => {
-    console.log('Elicitation form submitted:', formData);
     onSubmit?.({ action: 'accept', data: formData });
     onOpenChange(false);
   };
@@ -224,13 +221,11 @@ function ElicitationUrlMode({
   };
 
   const handleCancel = () => {
-    console.log('Elicitation cancelled');
     onSubmit?.({ action: 'cancel' });
     onOpenChange(false);
   };
 
   const handleDecline = () => {
-    console.log('Elicitation declined');
     onSubmit?.({ action: 'decline' });
     onOpenChange(false);
   };

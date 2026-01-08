@@ -1,4 +1,15 @@
-import type { ToolDefinition, ToolChoice } from '@/types/responses';
+// Re-export types from proper types directory
+export type {
+  SamplingMessage,
+  ModelPreferences,
+  SamplingRequest,
+  ElicitationFormField,
+  ElicitationFormRequest,
+  ElicitationUrlRequest,
+  ElicitationRequest,
+} from '@/types/clientRequests';
+
+import type { SamplingRequest, ElicitationFormRequest, ElicitationUrlRequest } from '@/types/clientRequests';
 
 // OAuth State
 export interface OAuthState {
@@ -42,33 +53,6 @@ export const mockOAuthState: OAuthState = {
     },
   },
 };
-
-// Sampling types
-export interface SamplingMessage {
-  role: 'user' | 'assistant';
-  content:
-    | { type: 'text'; text: string }
-    | { type: 'image'; data: string; mimeType: string };
-}
-
-export interface ModelPreferences {
-  hints?: string[];
-  costPriority?: number;
-  speedPriority?: number;
-  intelligencePriority?: number;
-}
-
-export interface SamplingRequest {
-  messages: SamplingMessage[];
-  modelPreferences?: ModelPreferences;
-  maxTokens: number;
-  stopSequences?: string[];
-  temperature?: number;
-  includeContext?: 'none' | 'thisServer' | 'allServers';
-  // Tool calling support (MCP 2025-11-25)
-  tools?: ToolDefinition[];
-  toolChoice?: ToolChoice;
-}
 
 export const mockSamplingRequest: SamplingRequest = {
   messages: [
@@ -158,36 +142,7 @@ export const mockSamplingWithToolsRequest: SamplingRequest = {
   toolChoice: { type: 'auto' },
 };
 
-// Elicitation types
-export interface ElicitationFormField {
-  name: string;
-  type: 'string' | 'number' | 'boolean';
-  description?: string;
-  required?: boolean;
-  enum?: string[];
-  default?: string | number | boolean;
-}
-
-export interface ElicitationFormRequest {
-  mode: 'form';
-  message: string;
-  schema: {
-    properties: Record<string, ElicitationFormField>;
-    required?: string[];
-  };
-  serverName: string;
-}
-
-export interface ElicitationUrlRequest {
-  mode: 'url';
-  message: string;
-  url: string;
-  elicitationId: string;
-  serverName: string;
-}
-
-export type ElicitationRequest = ElicitationFormRequest | ElicitationUrlRequest;
-
+// Mock elicitation data
 export const mockFormRequest: ElicitationFormRequest = {
   mode: 'form',
   message: 'Please provide your database connection details to proceed.',

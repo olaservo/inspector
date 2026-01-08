@@ -93,14 +93,12 @@ export function ServerCard({ server, onConnectionModeChange }: ServerCardProps) 
     }
   };
 
-  const handleEdit = (config: ServerConfig) => {
-    console.log('Editing server:', config);
+  const handleEdit = (_config: ServerConfig) => {
     // TODO: Actually update the server via proxy API
   };
 
   const handleRemove = () => {
     if (confirm(`Remove server "${server.name}"?`)) {
-      console.log('Removing server:', server.id);
       // TODO: Actually remove the server via proxy API
     }
   };
@@ -118,15 +116,13 @@ export function ServerCard({ server, onConnectionModeChange }: ServerCardProps) 
     setCloneModalOpen(true);
   };
 
-  const handleCloneSave = (config: ServerConfig) => {
-    console.log('Creating cloned server:', config);
+  const handleCloneSave = (_config: ServerConfig) => {
     // TODO: Actually create the server via proxy API
     setCloneModalOpen(false);
     setClonedConfig(null);
   };
 
-  const handleSettingsSave = (settings: ServerSettings) => {
-    console.log('Saving server settings:', settings);
+  const handleSettingsSave = (_settings: ServerSettings) => {
     // TODO: Actually save settings via proxy API
   };
 

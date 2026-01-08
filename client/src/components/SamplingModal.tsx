@@ -118,7 +118,6 @@ export function SamplingModal({ open, onOpenChange, request: propRequest, onResp
   };
 
   const handleReject = () => {
-    console.log('Sampling request rejected');
     onOpenChange(false);
   };
 
@@ -129,7 +128,6 @@ export function SamplingModal({ open, onOpenChange, request: propRequest, onResp
       stopReason,
       toolCalls: stopReason === 'toolUse' && toolCalls.length > 0 ? toolCalls : undefined,
     };
-    console.log('Sending sampling response:', samplingResponse);
     onResponse?.(samplingResponse);
     onOpenChange(false);
   };

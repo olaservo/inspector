@@ -53,19 +53,17 @@ export function ServerList() {
     showInfoToast('Disconnected', 'Disconnected from MCP server');
   };
 
-  const handleSaveServer = (config: ServerConfig) => {
-    console.log('New server config:', config);
+  const handleSaveServer = (_config: ServerConfig) => {
     // TODO: Actually save the server config
   };
 
-  const handleImportServerJson = (config: {
+  const handleImportServerJson = (_config: {
     name: string;
     transport: string;
     command?: string;
     url?: string;
     env: Record<string, string>;
   }) => {
-    console.log('Imported server config:', config);
     // TODO: Actually save the imported server config
   };
 
@@ -74,8 +72,7 @@ export function ServerList() {
   };
 
   // Handler for connection mode changes (demonstrates toast usage)
-  const handleConnectionModeChange = (serverId: string, mode: ConnectionMode) => {
-    console.log('Connection mode changed:', serverId, mode);
+  const handleConnectionModeChange = (_serverId: string, mode: ConnectionMode) => {
     showSuccessToast('Connection Mode Updated', `Server now using ${mode} connection`);
   };
 
