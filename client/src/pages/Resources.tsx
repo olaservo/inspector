@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Grid,
   Card,
@@ -13,18 +13,14 @@ import {
   Collapse,
   UnstyledButton,
   Paper,
+  Loader,
 } from '@mantine/core';
-import { IconChevronDown, IconChevronRight } from '@tabler/icons-react';
+import { IconChevronDown, IconChevronRight, IconPlugConnectedX, IconAlertCircle } from '@tabler/icons-react';
 import { ListChangedIndicator } from '../components/ListChangedIndicator';
 import { AnnotationBadges, getPriorityLabel } from '../components/AnnotationBadges';
-import {
-  mockResources,
-  mockTemplates,
-  mockSubscriptions,
-  type Resource,
-  type ResourceTemplate,
-  type Subscription,
-} from '@/mocks';
+import { useMcp } from '@/context';
+import { useMcpResources } from '@/hooks';
+import type { Resource, ResourceTemplate } from '@modelcontextprotocol/sdk/types.js';
 
 // Collapsible section component for accordion pattern
 interface AccordionSectionProps {
@@ -62,11 +58,26 @@ function AccordionSection({ title, count, isOpen, onToggle, children }: Accordio
 }
 
 export function Resources() {
-  const [hasResourcesChanged, setHasResourcesChanged] = useState(true);
-  const [selectedResource, setSelectedResource] = useState<Resource>(mockResources[0]);
+  const { isConnected } = useMcp();
+  const {
+    resources,
+    templates,
+    subscriptions,
+    isLoading,
+    error,
+    listChanged,
+    readResource,
+    subscribe,
+    unsubscribe,
+    refresh,
+    clearListChanged,
+  } = useMcpResources();
+
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
   const [searchFilter, setSearchFilter] = useState('');
   const [templateInputs, setTemplateInputs] = useState<Record<string, string>>({});
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>(mockSubscriptions);
+  const [resourceContent, setResourceContent] = useState<string | null>(null);
+  const [isReadingResource, setIsReadingResource] = useState(false);
 
   // Accordion state - Resources expanded by default, others collapsed
   const [expandedSections, setExpandedSections] = useState({
@@ -75,56 +86,187 @@ export function Resources() {
     subscriptions: false,
   });
 
+  // Select first resource when resources load
+  useEffect(() => {
+    if (resources.length > 0 && !selectedResource) {
+      setSelectedResource(resources[0]);
+    }
+  }, [resources, selectedResource]);
+
+  // Read resource content when selection changes
+  useEffect(() => {
+    if (!selectedResource || !isConnected) {
+      setResourceContent(null);
+      return;
+    }
+
+    const fetchContent = async () => {
+      setIsReadingResource(true);
+      try {
+        const result = await readResource(selectedResource.uri);
+        // Format the content for display
+        const content = result.contents
+          .map((c) => {
+            if ('text' in c) return c.text;
+            if ('blob' in c) return `[Binary data: ${c.mimeType || 'unknown'}]`;
+            return JSON.stringify(c);
+          })
+          .join('\n');
+        setResourceContent(content);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to read resource';
+        setResourceContent(`Error: ${message}`);
+      } finally {
+        setIsReadingResource(false);
+      }
+    };
+
+    fetchContent();
+  }, [selectedResource, isConnected, readResource]);
+
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
-  const handleRefresh = () => {
-    setHasResourcesChanged(false);
+  const handleRefresh = async () => {
+    await refresh();
+    clearListChanged();
   };
 
   const handleTemplateInputChange = (template: string, value: string) => {
     setTemplateInputs((prev) => ({ ...prev, [template]: value }));
   };
 
-  const handleTemplateGo = (template: ResourceTemplate) => {
+  const handleTemplateGo = async (template: ResourceTemplate) => {
     const value = templateInputs[template.uriTemplate] || '';
     // Extract variable name from template
     const varMatch = template.uriTemplate.match(/\{(\w+)\}/);
     if (varMatch && value) {
       const resolvedUri = template.uriTemplate.replace(`{${varMatch[1]}}`, value);
       console.log('Resolving template:', resolvedUri);
-      // In real implementation, would fetch the resolved resource
+
+      // Read the resolved resource
+      setIsReadingResource(true);
+      try {
+        const result = await readResource(resolvedUri);
+        const content = result.contents
+          .map((c) => {
+            if ('text' in c) return c.text;
+            if ('blob' in c) return `[Binary data: ${c.mimeType || 'unknown'}]`;
+            return JSON.stringify(c);
+          })
+          .join('\n');
+        setResourceContent(content);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to read resource';
+        setResourceContent(`Error: ${message}`);
+      } finally {
+        setIsReadingResource(false);
+      }
     }
   };
 
-  const handleSubscribe = () => {
-    if (!subscriptions.find((s) => s.uri === selectedResource.uri)) {
-      setSubscriptions((prev) => [
-        ...prev,
-        { uri: selectedResource.uri, lastUpdated: new Date().toISOString() },
-      ]);
+  const handleSubscribe = async () => {
+    if (selectedResource) {
+      try {
+        await subscribe(selectedResource.uri);
+      } catch (err) {
+        console.error('Failed to subscribe:', err);
+      }
     }
   };
 
-  const handleUnsubscribe = (uri: string) => {
-    setSubscriptions((prev) => prev.filter((s) => s.uri !== uri));
+  const handleUnsubscribe = async (uri: string) => {
+    try {
+      await unsubscribe(uri);
+    } catch (err) {
+      console.error('Failed to unsubscribe:', err);
+    }
   };
 
   // Filter all sections based on search
-  const filteredResources = mockResources.filter((resource) =>
+  const filteredResources = resources.filter((resource) =>
     resource.uri.toLowerCase().includes(searchFilter.toLowerCase())
   );
-  const filteredTemplates = mockTemplates.filter(
+  const filteredTemplates = templates.filter(
     (t) =>
       t.uriTemplate.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      t.description.toLowerCase().includes(searchFilter.toLowerCase())
+      (t.description?.toLowerCase().includes(searchFilter.toLowerCase()) ?? false)
   );
   const filteredSubscriptions = subscriptions.filter((s) =>
     s.uri.toLowerCase().includes(searchFilter.toLowerCase())
   );
 
-  const isSubscribed = subscriptions.some((s) => s.uri === selectedResource.uri);
+  const isSubscribed = selectedResource
+    ? subscriptions.some((s) => s.uri === selectedResource.uri)
+    : false;
+
+  // Show disconnected state
+  if (!isConnected) {
+    return (
+      <Grid gutter="md" h="calc(100vh - 120px)">
+        <Grid.Col span={12}>
+          <Card h="100%" withBorder>
+            <Stack align="center" justify="center" h="100%" gap="md">
+              <IconPlugConnectedX size={48} color="gray" />
+              <Title order={3} c="dimmed">Not Connected</Title>
+              <Text c="dimmed">Connect to an MCP server to view resources.</Text>
+            </Stack>
+          </Card>
+        </Grid.Col>
+      </Grid>
+    );
+  }
+
+  // Show loading state
+  if (isLoading && resources.length === 0) {
+    return (
+      <Grid gutter="md" h="calc(100vh - 120px)">
+        <Grid.Col span={12}>
+          <Card h="100%" withBorder>
+            <Stack align="center" justify="center" h="100%" gap="md">
+              <Loader size="lg" />
+              <Text c="dimmed">Loading resources...</Text>
+            </Stack>
+          </Card>
+        </Grid.Col>
+      </Grid>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <Grid gutter="md" h="calc(100vh - 120px)">
+        <Grid.Col span={12}>
+          <Card h="100%" withBorder>
+            <Stack align="center" justify="center" h="100%" gap="md">
+              <IconAlertCircle size={48} color="red" />
+              <Title order={3} c="red">Error Loading Resources</Title>
+              <Text c="dimmed">{error}</Text>
+              <Button onClick={handleRefresh}>Retry</Button>
+            </Stack>
+          </Card>
+        </Grid.Col>
+      </Grid>
+    );
+  }
+
+  // Show empty state if no resources capability
+  if (resources.length === 0 && templates.length === 0) {
+    return (
+      <Grid gutter="md" h="calc(100vh - 120px)">
+        <Grid.Col span={12}>
+          <Card h="100%" withBorder>
+            <Stack align="center" justify="center" h="100%" gap="md">
+              <Title order={3} c="dimmed">No Resources Available</Title>
+              <Text c="dimmed">This server does not expose any resources.</Text>
+            </Stack>
+          </Card>
+        </Grid.Col>
+      </Grid>
+    );
+  }
 
   return (
     <Grid gutter="md" h="calc(100vh - 120px)">
@@ -133,10 +275,10 @@ export function Resources() {
         <Card h="100%" withBorder style={{ display: 'flex', flexDirection: 'column' }}>
           <Stack gap="xs" p="md">
             <Group justify="space-between">
-              <Title order={5}>Resources ({mockResources.length})</Title>
+              <Title order={5}>Resources ({resources.length})</Title>
             </Group>
             <ListChangedIndicator
-              hasChanges={hasResourcesChanged}
+              hasChanges={listChanged}
               onRefresh={handleRefresh}
               label="List updated"
             />
@@ -163,13 +305,13 @@ export function Resources() {
                     {filteredResources.map((resource) => (
                       <Stack key={resource.uri} gap={4}>
                         <Button
-                          variant={selectedResource.uri === resource.uri ? 'filled' : 'subtle'}
+                          variant={selectedResource?.uri === resource.uri ? 'filled' : 'subtle'}
                           justify="flex-start"
                           fullWidth
                           size="sm"
                           onClick={() => setSelectedResource(resource)}
                         >
-                          {resource.uri.split('/').pop()}
+                          {resource.name || resource.uri.split('/').pop() || resource.uri}
                         </Button>
                         {/* Annotation badges */}
                         <AnnotationBadges
@@ -182,42 +324,47 @@ export function Resources() {
                 </AccordionSection>
 
                 {/* Templates Section */}
-                <AccordionSection
-                  title="Templates"
-                  count={filteredTemplates.length}
-                  isOpen={expandedSections.templates && filteredTemplates.length > 0}
-                  onToggle={() => toggleSection('templates')}
-                >
-                  <Stack gap="sm" pt="xs">
-                    {filteredTemplates.map((template) => {
-                      const varMatch = template.uriTemplate.match(/\{(\w+)\}/);
-                      const varName = varMatch ? varMatch[1] : '';
-                      return (
-                        <Stack key={template.uriTemplate} gap={4}>
-                          <Text size="sm" c="dimmed">{template.uriTemplate}</Text>
-                          <Group gap={4}>
-                            <TextInput
-                              placeholder={varName}
-                              size="xs"
-                              flex={1}
-                              value={templateInputs[template.uriTemplate] || ''}
-                              onChange={(e) =>
-                                handleTemplateInputChange(template.uriTemplate, e.target.value)
-                              }
-                            />
-                            <Button
-                              size="xs"
-                              variant="outline"
-                              onClick={() => handleTemplateGo(template)}
-                            >
-                              Go
-                            </Button>
-                          </Group>
-                        </Stack>
-                      );
-                    })}
-                  </Stack>
-                </AccordionSection>
+                {templates.length > 0 && (
+                  <AccordionSection
+                    title="Templates"
+                    count={filteredTemplates.length}
+                    isOpen={expandedSections.templates && filteredTemplates.length > 0}
+                    onToggle={() => toggleSection('templates')}
+                  >
+                    <Stack gap="sm" pt="xs">
+                      {filteredTemplates.map((template) => {
+                        const varMatch = template.uriTemplate.match(/\{(\w+)\}/);
+                        const varName = varMatch ? varMatch[1] : '';
+                        return (
+                          <Stack key={template.uriTemplate} gap={4}>
+                            <Text size="sm" c="dimmed">{template.uriTemplate}</Text>
+                            {template.description && (
+                              <Text size="xs" c="dimmed">{template.description}</Text>
+                            )}
+                            <Group gap={4}>
+                              <TextInput
+                                placeholder={varName}
+                                size="xs"
+                                flex={1}
+                                value={templateInputs[template.uriTemplate] || ''}
+                                onChange={(e) =>
+                                  handleTemplateInputChange(template.uriTemplate, e.target.value)
+                                }
+                              />
+                              <Button
+                                size="xs"
+                                variant="outline"
+                                onClick={() => handleTemplateGo(template)}
+                              >
+                                Go
+                              </Button>
+                            </Group>
+                          </Stack>
+                        );
+                      })}
+                    </Stack>
+                  </AccordionSection>
+                )}
 
                 {/* Subscriptions Section */}
                 <AccordionSection
@@ -269,78 +416,103 @@ export function Resources() {
           <Stack gap="md" p="md">
             <Title order={5}>Content Preview</Title>
 
-            <Stack gap={4}>
-              <Text size="sm">
-                <Text span c="dimmed">URI:</Text> {selectedResource.uri}
-              </Text>
-              <Text size="sm">
-                <Text span c="dimmed">MIME:</Text> {selectedResource.mimeType}
-              </Text>
-            </Stack>
+            {selectedResource ? (
+              <>
+                <Stack gap={4}>
+                  <Text size="sm">
+                    <Text span c="dimmed">URI:</Text> {selectedResource.uri}
+                  </Text>
+                  {selectedResource.mimeType && (
+                    <Text size="sm">
+                      <Text span c="dimmed">MIME:</Text> {selectedResource.mimeType}
+                    </Text>
+                  )}
+                  {selectedResource.description && (
+                    <Text size="sm">
+                      <Text span c="dimmed">Description:</Text> {selectedResource.description}
+                    </Text>
+                  )}
+                </Stack>
 
-            {/* Display annotations */}
-            {selectedResource.annotations &&
-              Object.keys(selectedResource.annotations).length > 0 && (
-                <Stack gap="xs">
-                  <Text size="sm" fw={500}>Annotations:</Text>
-                  <Group gap="md">
-                    {selectedResource.annotations.audience && (
-                      <Text size="sm" c="dimmed">
-                        Audience: {selectedResource.annotations.audience}
-                      </Text>
-                    )}
-                    {selectedResource.annotations.priority !== undefined && (
-                      <Text size="sm" c="dimmed">
-                        Priority: {selectedResource.annotations.priority.toFixed(1)} (
-                        {getPriorityLabel(selectedResource.annotations.priority).label})
-                      </Text>
+                {/* Display annotations */}
+                {selectedResource.annotations &&
+                  Object.keys(selectedResource.annotations).length > 0 && (
+                    <Stack gap="xs">
+                      <Text size="sm" fw={500}>Annotations:</Text>
+                      <Group gap="md">
+                        {selectedResource.annotations.audience && (
+                          <Text size="sm" c="dimmed">
+                            Audience:{' '}
+                            {Array.isArray(selectedResource.annotations.audience)
+                              ? selectedResource.annotations.audience.join(', ')
+                              : selectedResource.annotations.audience}
+                          </Text>
+                        )}
+                        {selectedResource.annotations.priority !== undefined && (
+                          <Text size="sm" c="dimmed">
+                            Priority: {selectedResource.annotations.priority.toFixed(1)} (
+                            {getPriorityLabel(selectedResource.annotations.priority).label})
+                          </Text>
+                        )}
+                      </Group>
+                    </Stack>
+                  )}
+
+                <ScrollArea mah="50vh">
+                  {isReadingResource ? (
+                    <Stack align="center" py="xl">
+                      <Loader size="sm" />
+                      <Text size="sm" c="dimmed">Loading content...</Text>
+                    </Stack>
+                  ) : (
+                    <Code block>
+                      {resourceContent || 'No content available'}
+                    </Code>
+                  )}
+                </ScrollArea>
+
+                <Group justify="space-between">
+                  <Group gap="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (resourceContent) {
+                          navigator.clipboard.writeText(resourceContent);
+                        }
+                      }}
+                    >
+                      Copy
+                    </Button>
+                    {isSubscribed ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleUnsubscribe(selectedResource.uri)}
+                      >
+                        Unsubscribe
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="sm" onClick={handleSubscribe}>
+                        Subscribe
+                      </Button>
                     )}
                   </Group>
-                </Stack>
-              )}
-
-            <ScrollArea mah="50vh">
-              <Code block>
-                {JSON.stringify(
-                  {
-                    name: 'my-app',
-                    version: '1.0.0',
-                    description: 'Sample configuration file',
-                  },
-                  null,
-                  2
-                )}
-              </Code>
-            </ScrollArea>
-
-            <Group justify="space-between">
-              <Group gap="sm">
-                <Button variant="outline" size="sm">
-                  Copy
-                </Button>
-                {isSubscribed ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleUnsubscribe(selectedResource.uri)}
-                  >
-                    Unsubscribe
-                  </Button>
-                ) : (
-                  <Button variant="outline" size="sm" onClick={handleSubscribe}>
-                    Subscribe
-                  </Button>
-                )}
-              </Group>
-              {isSubscribed && (
-                <Text size="xs" c="dimmed">
-                  Last updated:{' '}
-                  {new Date(
-                    subscriptions.find((s) => s.uri === selectedResource.uri)?.lastUpdated || ''
-                  ).toLocaleTimeString()}
-                </Text>
-              )}
-            </Group>
+                  {isSubscribed && (
+                    <Text size="xs" c="dimmed">
+                      Last updated:{' '}
+                      {new Date(
+                        subscriptions.find((s) => s.uri === selectedResource.uri)?.lastUpdated || ''
+                      ).toLocaleTimeString()}
+                    </Text>
+                  )}
+                </Group>
+              </>
+            ) : (
+              <Stack align="center" justify="center" h="200px">
+                <Text c="dimmed">Select a resource to view its content</Text>
+              </Stack>
+            )}
           </Stack>
         </Card>
       </Grid.Col>
