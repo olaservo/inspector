@@ -17,6 +17,7 @@ export {
 
 export {
   setupSamplingHandler,
+  setupElicitationHandler,
   resolveSamplingRequest,
   rejectSamplingRequest,
   resolveElicitationRequest,

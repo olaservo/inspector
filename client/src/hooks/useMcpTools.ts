@@ -18,6 +18,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useMcp } from '@/context';
+import { ToolListChangedNotificationSchema } from '@modelcontextprotocol/sdk/types.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 
 // Tool execution result type
@@ -135,9 +136,22 @@ export function useMcpTools(): UseMcpToolsResult {
     }
   }, [isConnected, fetchTools]);
 
-  // Note: Tool list change notifications would be handled here
-  // For now, we rely on manual refresh. The SDK notification handler
-  // API may vary, so this can be enhanced when needed.
+  // Set up tool list change notification handler
+  useEffect(() => {
+    if (!client || !isConnected) return;
+
+    client.setNotificationHandler(
+      ToolListChangedNotificationSchema,
+      () => {
+        console.log('[MCP Tools] Tool list changed');
+        setListChanged(true);
+      }
+    );
+
+    return () => {
+      // Note: SDK doesn't provide a way to remove notification handlers
+    };
+  }, [client, isConnected]);
 
   return {
     tools,

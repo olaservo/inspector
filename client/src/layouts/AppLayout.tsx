@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   AppShell,
   Group,
@@ -7,20 +7,15 @@ import {
   Badge,
   Text,
   UnstyledButton,
+  Loader,
 } from '@mantine/core';
+import { IconPlugConnected, IconPlugConnectedX, IconAlertCircle } from '@tabler/icons-react';
 import { ThemeToggle } from '../components/ThemeToggle';
-
-// Fallback server data for direct navigation
-const fallbackServer = {
-  name: 'Unknown Server',
-  status: 'connected' as const,
-  latency: 0,
-};
+import { useMcp } from '@/context';
 
 export function AppLayout() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const server = location.state?.server || fallbackServer;
+  const { connectionState, serverInfo, serverUrl, disconnect, isConnected } = useMcp();
 
   const navItems = [
     { label: 'Tools', path: '/tools' },
@@ -30,6 +25,44 @@ export function AppLayout() {
     { label: 'Tasks', path: '/tasks' },
     { label: 'History', path: '/history' },
   ];
+
+  // Get status badge based on connection state
+  const getStatusBadge = () => {
+    switch (connectionState) {
+      case 'connected':
+        return (
+          <Badge size="sm" color="green" variant="dot" leftSection={<IconPlugConnected size={12} />}>
+            Connected
+          </Badge>
+        );
+      case 'connecting':
+        return (
+          <Badge size="sm" color="blue" variant="dot" leftSection={<Loader size={12} />}>
+            Connecting...
+          </Badge>
+        );
+      case 'error':
+        return (
+          <Badge size="sm" color="red" variant="dot" leftSection={<IconAlertCircle size={12} />}>
+            Error
+          </Badge>
+        );
+      default:
+        return (
+          <Badge size="sm" color="gray" variant="dot" leftSection={<IconPlugConnectedX size={12} />}>
+            Disconnected
+          </Badge>
+        );
+    }
+  };
+
+  const handleDisconnect = async () => {
+    await disconnect();
+    navigate('/');
+  };
+
+  // Get display name for server
+  const serverName = serverInfo?.name || (serverUrl ? new URL(serverUrl).hostname : 'No Server');
 
   return (
     <AppShell header={{ height: 60 }} padding="md">
@@ -41,7 +74,7 @@ export function AppLayout() {
               <Menu.Target>
                 <UnstyledButton>
                   <Group gap="xs">
-                    <Text fw={600}>{server.name}</Text>
+                    <Text fw={600}>{serverName}</Text>
                     <Text size="xs" c="dimmed">▼</Text>
                   </Group>
                 </UnstyledButton>
@@ -50,21 +83,35 @@ export function AppLayout() {
                 <Menu.Item onClick={() => navigate('/')}>
                   Switch Server
                 </Menu.Item>
-                <Menu.Item>Server Info</Menu.Item>
+                {serverInfo && (
+                  <>
+                    <Menu.Divider />
+                    <Menu.Label>Server Info</Menu.Label>
+                    <Menu.Item disabled>
+                      <Text size="xs">Version: {serverInfo.version}</Text>
+                    </Menu.Item>
+                    {serverInfo.capabilities.tools && (
+                      <Menu.Item disabled>
+                        <Text size="xs">Tools: Supported</Text>
+                      </Menu.Item>
+                    )}
+                    {serverInfo.capabilities.resources && (
+                      <Menu.Item disabled>
+                        <Text size="xs">Resources: Supported</Text>
+                      </Menu.Item>
+                    )}
+                    {serverInfo.capabilities.prompts && (
+                      <Menu.Item disabled>
+                        <Text size="xs">Prompts: Supported</Text>
+                      </Menu.Item>
+                    )}
+                  </>
+                )}
               </Menu.Dropdown>
             </Menu>
 
             <Group gap="xs">
-              <Badge
-                size="sm"
-                color={server.status === 'connected' ? 'green' : 'gray'}
-                variant="dot"
-              >
-                Connected
-              </Badge>
-              <Text size="xs" c="dimmed">
-                ({server.latency || 0}ms)
-              </Text>
+              {getStatusBadge()}
             </Group>
           </Group>
 
@@ -93,7 +140,8 @@ export function AppLayout() {
               variant="outline"
               color="red"
               size="sm"
-              onClick={() => navigate('/')}
+              onClick={handleDisconnect}
+              disabled={!isConnected}
             >
               Disconnect
             </Button>

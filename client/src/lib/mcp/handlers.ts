@@ -12,8 +12,11 @@
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import {
   CreateMessageRequestSchema,
+  ElicitRequestSchema,
   type CreateMessageRequest,
   type CreateMessageResult,
+  type ElicitRequest,
+  type ElicitResult,
 } from '@modelcontextprotocol/sdk/types.js';
 import type { SamplingRequest, ElicitationRequest } from '@/mocks/auth';
 import type { SamplingResponse } from '@/components/SamplingRequestCard';
@@ -202,6 +205,132 @@ export function setupSamplingHandler(
       } finally {
         // Clean up the resolver
         samplingResolvers.delete(requestId);
+      }
+    }
+  );
+}
+
+/**
+ * Convert MCP SDK ElicitRequest to our internal ElicitationRequest format.
+ */
+function convertToElicitationRequest(
+  sdkRequest: ElicitRequest['params']
+): ElicitationRequest {
+  // Check if it's a form-based or URL-based elicitation
+  if ('requestedSchema' in sdkRequest) {
+    // Form-based elicitation
+    return {
+      mode: 'form',
+      message: sdkRequest.message,
+      schema: {
+        properties: Object.fromEntries(
+          Object.entries(sdkRequest.requestedSchema.properties || {}).map(([key, value]) => {
+            const prop = value as { type?: string; description?: string; enum?: string[]; default?: unknown };
+            return [
+              key,
+              {
+                name: key,
+                type: (prop.type || 'string') as 'string' | 'number' | 'boolean',
+                description: prop.description,
+                enum: prop.enum,
+                default: prop.default as string | number | boolean | undefined,
+              },
+            ];
+          })
+        ),
+        required: sdkRequest.requestedSchema.required,
+      },
+      serverName: 'MCP Server',
+    };
+  } else {
+    // URL-based elicitation
+    const urlParams = sdkRequest as { message: string; url: string; elicitationId: string };
+    return {
+      mode: 'url',
+      message: urlParams.message,
+      url: urlParams.url,
+      elicitationId: urlParams.elicitationId,
+      serverName: 'MCP Server',
+    };
+  }
+}
+
+/**
+ * Convert user response to MCP SDK ElicitResult format.
+ */
+function convertToElicitResult(
+  data: Record<string, unknown>,
+  action: 'accept' | 'decline' | 'cancel' = 'accept'
+): ElicitResult {
+  // Convert data to the expected type for ElicitResult.content
+  const content: Record<string, string | number | boolean | string[]> | undefined =
+    action === 'accept'
+      ? Object.fromEntries(
+          Object.entries(data).map(([key, value]) => {
+            // Ensure values match expected types
+            if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+              return [key, value];
+            }
+            if (Array.isArray(value) && value.every((v) => typeof v === 'string')) {
+              return [key, value as string[]];
+            }
+            // Convert other types to string
+            return [key, String(value)];
+          })
+        )
+      : undefined;
+
+  return {
+    action,
+    content,
+  };
+}
+
+/**
+ * Set up the elicitation request handler on the MCP client.
+ *
+ * @param client - The MCP client instance
+ * @param callbacks - Callbacks for handling requests
+ * @param parentRequestId - The ID of the parent tool execution request
+ */
+export function setupElicitationHandler(
+  client: Client,
+  callbacks: ElicitationHandlerCallbacks,
+  parentRequestId: string
+): void {
+  client.setRequestHandler(
+    ElicitRequestSchema,
+    async (request: ElicitRequest) => {
+      const requestId = generateElicitationRequestId();
+      const elicitationRequest = convertToElicitationRequest(request.params);
+
+      console.log('[MCP Handlers] Elicitation request received:', requestId, elicitationRequest);
+
+      // Create a promise that will be resolved by the UI
+      const responsePromise = new Promise<Record<string, unknown>>((resolve, reject) => {
+        elicitationResolvers.set(requestId, { resolve, reject });
+      });
+
+      // Notify the UI about the new request
+      callbacks.onElicitationRequest(requestId, elicitationRequest, parentRequestId);
+
+      try {
+        // Wait for the UI to respond
+        const response = await responsePromise;
+        console.log('[MCP Handlers] Elicitation response:', requestId, response);
+
+        // Convert to SDK format and return
+        return convertToElicitResult(response);
+      } catch (err) {
+        // User declined or cancelled
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        if (message.includes('rejected') || message.includes('declined')) {
+          return convertToElicitResult({}, 'decline');
+        }
+        return convertToElicitResult({}, 'cancel');
+      } finally {
+        // Clean up the resolver
+        elicitationResolvers.delete(requestId);
       }
     }
   );
