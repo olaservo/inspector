@@ -24,7 +24,7 @@ import {
   useMcp,
   generateRequestId,
 } from '@/context';
-import { useMcpTools } from '@/hooks';
+import { useMcpTools, useSamplingHandler } from '@/hooks';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import type { SamplingResponse } from '../components/SamplingRequestCard';
 
@@ -44,6 +44,14 @@ export function Tools() {
   const { state, dispatch } = useExecution();
   const activeProfile = useActiveProfile();
   const isExecuting = state.isExecuting;
+
+  // Sampling handler for client requests
+  const {
+    setupHandler: setupSamplingHandler,
+    handleResponse: handleSamplingResponse,
+    handleReject: handleSamplingReject,
+    cleanup: cleanupSampling,
+  } = useSamplingHandler();
 
   // Select first tool when tools load
   useEffect(() => {
@@ -78,6 +86,9 @@ export function Tools() {
     dispatch({ type: 'START_EXECUTION', requestId });
     setToolResult(null);
     setExecutionStartTime(Date.now());
+
+    // Set up sampling handler for this execution
+    setupSamplingHandler(requestId);
 
     // Show progress
     dispatch({
@@ -117,11 +128,15 @@ export function Tools() {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setToolResult(JSON.stringify({ error: errorMessage }, null, 2));
       dispatch({ type: 'END_EXECUTION' });
+    } finally {
+      // Clean up sampling handler
+      cleanupSampling();
     }
   };
 
   const handleCancel = () => {
     dispatch({ type: 'CANCEL_EXECUTION' });
+    cleanupSampling();
     setToolResult(null);
     setExecutionStartTime(null);
   };
@@ -131,17 +146,14 @@ export function Tools() {
   };
 
   const handleResolveSampling = (requestId: string, response: SamplingResponse) => {
-    dispatch({
-      type: 'UPDATE_CLIENT_REQUEST',
-      id: requestId,
-      status: 'completed',
-      response,
-    });
+    // Use the sampling handler to resolve the request (sends response to server)
+    handleSamplingResponse(requestId, response);
+    // Remove from UI
     dispatch({ type: 'REMOVE_CLIENT_REQUEST', id: requestId });
-    checkExecutionComplete();
   };
 
   const handleResolveElicitation = (requestId: string, data: Record<string, unknown>) => {
+    // TODO: Wire up elicitation handler when implemented
     dispatch({
       type: 'UPDATE_CLIENT_REQUEST',
       id: requestId,
@@ -149,34 +161,13 @@ export function Tools() {
       response: data,
     });
     dispatch({ type: 'REMOVE_CLIENT_REQUEST', id: requestId });
-    checkExecutionComplete();
   };
 
   const handleReject = (requestId: string) => {
-    dispatch({
-      type: 'UPDATE_CLIENT_REQUEST',
-      id: requestId,
-      status: 'rejected',
-    });
+    // Use the sampling handler to reject the request
+    handleSamplingReject(requestId);
+    // Remove from UI
     dispatch({ type: 'REMOVE_CLIENT_REQUEST', id: requestId });
-    checkExecutionComplete();
-  };
-
-  const checkExecutionComplete = () => {
-    // Check if all requests are resolved (after this update)
-    // We use setTimeout to let the state update first
-    setTimeout(() => {
-      if (state.pendingClientRequests.length <= 1) {
-        dispatch({ type: 'END_EXECUTION' });
-        setToolResult(JSON.stringify(
-          {
-            content: [{ type: 'text', text: 'Tool execution completed successfully!' }],
-          },
-          null,
-          2
-        ));
-      }
-    }, 0);
   };
 
   const filteredTools = tools.filter((tool) =>
