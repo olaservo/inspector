@@ -25,7 +25,8 @@ import {
   SimpleGrid,
   CopyButton as MantineCopyButton,
 } from '@mantine/core';
-import { mockOAuthState, type OAuthState } from '@/mocks';
+import { mockOAuthState } from '@/mocks';
+import type { OAuthState } from '@/types';
 
 type StepStatus = 'pending' | 'completed' | 'active' | 'error';
 

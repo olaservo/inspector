@@ -5,8 +5,8 @@ import {
   type ReactNode,
   type Dispatch,
 } from 'react';
-import type { SamplingRequest, ElicitationRequest } from '@/mocks/auth';
-import type { TestingProfile } from '@/mocks/testingProfiles';
+import type { SamplingRequest, ElicitationRequest } from '@/types';
+import type { TestingProfile } from '@/types';
 import { mockTestingProfiles } from '@/mocks/testingProfiles';
 
 // Types for pending client requests during tool execution

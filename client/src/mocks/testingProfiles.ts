@@ -1,16 +1,6 @@
 /**
- * Mock testing profiles for sampling/elicitation
- * Types are re-exported from @/types for backwards compatibility
+ * Default testing profiles for sampling/elicitation
  */
-
-// Re-export types from proper types directory
-export type {
-  SamplingProviderType,
-  ModelOverride,
-  TestingProfile,
-} from '@/types/testingProfiles';
-
-export { getResponseForModelHint } from '@/types/testingProfiles';
 
 import type { TestingProfile } from '@/types/testingProfiles';
 

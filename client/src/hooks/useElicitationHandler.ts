@@ -24,7 +24,7 @@ import {
   rejectElicitationRequest,
   clearAllPendingRequests,
 } from '@/lib/mcp/handlers';
-import type { ElicitationRequest } from '@/mocks/auth';
+import type { ElicitationRequest } from '@/types';
 
 // Track which request IDs map to which elicitation request IDs
 const requestIdMap = new Map<string, string>();

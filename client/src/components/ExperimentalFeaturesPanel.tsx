@@ -29,7 +29,8 @@ import {
   IconTrash,
   IconHistory,
 } from '@tabler/icons-react';
-import { initialCapabilities, type ExperimentalCapability } from '@/mocks';
+import { initialCapabilities } from '@/mocks';
+import type { ExperimentalCapability } from '@/types';
 
 interface CustomHeader {
   key: string;

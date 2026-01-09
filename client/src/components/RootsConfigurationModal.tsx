@@ -18,7 +18,8 @@ import {
   Divider,
   Alert,
 } from '@mantine/core';
-import { initialRoots, type Root } from '@/mocks';
+import { initialRoots } from '@/mocks';
+import type { Root } from '@/types';
 
 interface RootsConfigurationModalProps {
   open: boolean;

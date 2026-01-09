@@ -14,7 +14,7 @@ import { IconPlus, IconPencil, IconTrash } from '@tabler/icons-react';
 import { useExecution } from '@/context/ExecutionContext';
 import { TestingProfileSelector } from './TestingProfileSelector';
 import { TestingProfileEditor } from './TestingProfileEditor';
-import type { TestingProfile } from '@/mocks/testingProfiles';
+import type { TestingProfile } from '@/types';
 
 interface TestingProfilesModalProps {
   opened: boolean;

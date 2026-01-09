@@ -16,7 +16,7 @@ import {
 } from '@mantine/core';
 import { IconPlugConnected, IconPlugConnectedX, IconAlertCircle } from '@tabler/icons-react';
 import { ServerCard, ConnectionMode } from '../components/ServerCard';
-import type { MockServer } from '@/mocks/servers';
+import type { MockServer } from '@/types';
 import { AddServerModal, ServerConfig as AddServerConfig } from '../components/AddServerModal';
 import { ImportServerJsonModal } from '../components/ImportServerJsonModal';
 import { showInfoToast, showSuccessToast, showErrorToast } from '../lib/toast';

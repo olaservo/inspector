@@ -1,5 +1,5 @@
 import { Select } from '@mantine/core';
-import type { TestingProfile } from '@/mocks/testingProfiles';
+import type { TestingProfile } from '@/types';
 
 interface TestingProfileSelectorProps {
   profiles: TestingProfile[];

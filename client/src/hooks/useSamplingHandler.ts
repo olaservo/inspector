@@ -24,7 +24,7 @@ import {
   rejectSamplingRequest,
   clearAllPendingRequests,
 } from '@/lib/mcp/handlers';
-import type { SamplingRequest } from '@/mocks/auth';
+import type { SamplingRequest } from '@/types';
 import type { SamplingResponse } from '@/components/SamplingRequestCard';
 
 // Track which request IDs map to which sampling request IDs

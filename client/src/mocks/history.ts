@@ -1,25 +1,8 @@
-// Request type discriminator for hierarchical display
-export type RequestType = 'primary' | 'client';
+/**
+ * Mock history data for testing
+ */
 
-export interface HistoryEntry {
-  id: string;
-  timestamp: string;
-  method: string;
-  target: string | null;
-  params?: Record<string, unknown>;
-  response?: Record<string, unknown>;
-  duration: number;
-  success: boolean;
-  pinned: boolean;
-  label?: string;
-  sseId?: string;
-  progressToken?: string;
-  // Hierarchical request trace fields
-  requestType?: RequestType; // 'primary' for tool/resource/prompt calls, 'client' for sampling/elicitation
-  parentRequestId?: string; // For client requests, links to parent tool call
-  childRequestIds?: string[]; // For primary requests, links to triggered client requests
-  relativeTime?: number; // Offset from parent request start (ms), for client requests
-}
+import type { HistoryEntry } from '@/types/history';
 
 export const initialHistory: HistoryEntry[] = [
   // Primary request with child sampling requests (hierarchical example)

@@ -20,11 +20,7 @@ import {
   IconAlertTriangle,
   IconX,
 } from '@tabler/icons-react';
-import type {
-  ElicitationFormRequest,
-  ElicitationUrlRequest,
-  ElicitationRequest,
-} from '@/mocks/auth';
+import type { ElicitationFormRequest, ElicitationUrlRequest, ElicitationRequest } from '@/types';
 
 interface ElicitationRequestCardProps {
   request: ElicitationRequest;

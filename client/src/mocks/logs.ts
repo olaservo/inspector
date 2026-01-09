@@ -1,12 +1,8 @@
-export interface LogEntry {
-  timestamp: string;
-  level: string;
-  message: string;
-  logger: string;
-  // Request correlation fields for filtering logs by request chain
-  requestId?: string; // The request that generated this log
-  parentRequestId?: string; // For logs from client requests, links to parent
-}
+/**
+ * Mock log data for testing
+ */
+
+import type { LogEntry } from '@/types/logs';
 
 export const mockLogs: LogEntry[] = [
   { timestamp: '2025-11-30T14:23:01Z', level: 'info', message: 'Server connected', logger: 'connection' },
@@ -23,16 +19,3 @@ export const mockLogs: LogEntry[] = [
   { timestamp: '2025-11-30T14:25:30Z', level: 'warning', message: 'Request timeout approaching', logger: 'connection' },
   { timestamp: '2025-11-30T14:26:00Z', level: 'error', message: 'Failed to fetch resource: 404', logger: 'resources' },
 ];
-
-export const logLevels = ['debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency'];
-
-export const levelColors: Record<string, string> = {
-  debug: 'gray',
-  info: 'blue',
-  notice: 'cyan',
-  warning: 'yellow',
-  error: 'red',
-  critical: 'red',
-  alert: 'red',
-  emergency: 'red',
-};

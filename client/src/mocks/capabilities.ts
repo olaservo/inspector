@@ -1,10 +1,6 @@
 /**
  * Default experimental capabilities configuration
- * Types are re-exported from @/types for backwards compatibility
  */
-
-// Re-export types from proper types directory
-export type { ExperimentalCapability } from '@/types/capabilities';
 
 import type { ExperimentalCapability } from '@/types/capabilities';
 

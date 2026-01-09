@@ -14,11 +14,7 @@ import {
   Table,
 } from '@mantine/core';
 import { IconPlus, IconTrash } from '@tabler/icons-react';
-import type {
-  TestingProfile,
-  SamplingProviderType,
-  ModelOverride,
-} from '@/mocks/testingProfiles';
+import type { TestingProfile, SamplingProviderType, ModelOverride } from '@/types';
 
 interface TestingProfileEditorProps {
   profile: TestingProfile;

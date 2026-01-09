@@ -19,13 +19,8 @@ import {
   Alert,
   Code,
 } from '@mantine/core';
-import {
-  mockFormRequest,
-  mockUrlRequest,
-  type ElicitationFormRequest,
-  type ElicitationUrlRequest,
-  type ElicitationRequest,
-} from '@/mocks';
+import { mockFormRequest, mockUrlRequest } from '@/mocks';
+import type { ElicitationFormRequest, ElicitationUrlRequest, ElicitationRequest } from '@/types';
 import type { ElicitationResponse } from '@/types/responses';
 
 interface ElicitationModalProps {

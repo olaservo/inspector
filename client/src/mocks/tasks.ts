@@ -1,11 +1,6 @@
 /**
  * Mock task data for testing
- * Types are re-exported from @/types for backwards compatibility
  */
-
-// Re-export types from proper types directory
-export type { ActiveTask, CompletedTask } from '@/types/tasks';
-export { taskStatusColors } from '@/types/tasks';
 
 import type { ActiveTask, CompletedTask } from '@/types/tasks';
 

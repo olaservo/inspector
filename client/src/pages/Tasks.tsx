@@ -11,7 +11,8 @@ import {
   Modal,
 } from '@mantine/core';
 import { IconRefresh, IconTrash } from '@tabler/icons-react';
-import { mockActiveTasks, mockCompletedTasks, taskStatusColors } from '@/mocks';
+import { mockActiveTasks, mockCompletedTasks } from '@/mocks';
+import { taskStatusColors } from '@/types';
 
 function formatElapsed(startedAt: string, endedAt?: string): string {
   const start = new Date(startedAt).getTime();

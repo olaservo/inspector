@@ -86,3 +86,24 @@ export function createServerConfig(
     ...partial,
   };
 }
+
+/**
+ * Server display model for UI components (ServerCard)
+ * Combines config with runtime state for display purposes
+ */
+export interface ServerDisplayModel {
+  id: string;
+  name: string;
+  version: string;
+  transport: 'stdio' | 'http';
+  command?: string;
+  url?: string;
+  status: 'connected' | 'disconnected' | 'failed';
+  capabilities: { tools: number; resources: number; prompts: number } | null;
+  retryCount?: number;
+  error?: string;
+  connectionMode?: ConnectionMode;
+}
+
+/** @deprecated Use ServerDisplayModel instead */
+export type MockServer = ServerDisplayModel;

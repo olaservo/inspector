@@ -1,20 +1,11 @@
-import type { ConnectionMode } from '../components/ServerCard';
+/**
+ * Mock server data for testing
+ */
 
-export interface MockServer {
-  id: string;
-  name: string;
-  version: string;
-  transport: 'stdio' | 'http';
-  command?: string;
-  url?: string;
-  status: 'connected' | 'disconnected' | 'failed';
-  capabilities: { tools: number; resources: number; prompts: number } | null;
-  retryCount?: number;
-  error?: string;
-  connectionMode?: ConnectionMode;
-}
+import type { ServerDisplayModel } from '@/types/servers';
 
-export const mockServers: MockServer[] = [
+// Mock servers for demo/testing
+export const mockServers: ServerDisplayModel[] = [
   {
     id: 'everything-server',
     name: 'everything-server',

@@ -18,7 +18,7 @@ import {
   type ElicitRequest,
   type ElicitResult,
 } from '@modelcontextprotocol/sdk/types.js';
-import type { SamplingRequest, ElicitationRequest } from '@/mocks/auth';
+import type { SamplingRequest, ElicitationRequest } from '@/types';
 import type { SamplingResponse } from '@/components/SamplingRequestCard';
 
 // Response resolvers - keyed by request ID

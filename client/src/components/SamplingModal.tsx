@@ -24,7 +24,9 @@ import {
   Divider,
   ScrollArea,
 } from '@mantine/core';
-import { mockSamplingRequest, type SamplingMessage, type SamplingRequest, getResponseForModelHint } from '@/mocks';
+import { mockSamplingRequest } from '@/mocks';
+import type { SamplingMessage, SamplingRequest } from '@/types';
+import { getResponseForModelHint } from '@/types';
 import { useExecution, useActiveProfile } from '@/context';
 import { TestingProfileSelector } from './TestingProfileSelector';
 import { TestingProfilesModal } from './TestingProfilesModal';

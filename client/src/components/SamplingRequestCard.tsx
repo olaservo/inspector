@@ -17,9 +17,8 @@ import {
   IconEdit,
   IconPlayerPlay,
 } from '@tabler/icons-react';
-import type { SamplingRequest } from '@/mocks/auth';
-import type { TestingProfile } from '@/mocks/testingProfiles';
-import { getResponseForModelHint } from '@/mocks/testingProfiles';
+import type { SamplingRequest, TestingProfile } from '@/types';
+import { getResponseForModelHint } from '@/types';
 import { TestingProfileSelector } from './TestingProfileSelector';
 
 export interface SamplingResponse {

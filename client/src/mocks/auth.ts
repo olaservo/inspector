@@ -1,20 +1,6 @@
 /**
- * Mock data for authentication and client requests
- * Types are re-exported from @/types for backwards compatibility
+ * Mock data for authentication and client requests testing
  */
-
-// Re-export types from proper types directory
-export type {
-  SamplingMessage,
-  ModelPreferences,
-  SamplingRequest,
-  ElicitationFormField,
-  ElicitationFormRequest,
-  ElicitationUrlRequest,
-  ElicitationRequest,
-} from '@/types/clientRequests';
-
-export type { OAuthState, Root } from '@/types/auth';
 
 import type { SamplingRequest, ElicitationFormRequest, ElicitationUrlRequest } from '@/types/clientRequests';
 import type { OAuthState, Root } from '@/types/auth';
