@@ -19,7 +19,7 @@ import { IconChevronDown, IconChevronRight, IconPlugConnectedX, IconAlertCircle 
 import { ListChangedIndicator } from '../components/ListChangedIndicator';
 import { AnnotationBadges, getPriorityLabel } from '../components/AnnotationBadges';
 import { useMcp } from '@/context';
-import { useMcpResources } from '@/hooks';
+import { useTrackedMcpResources } from '@/hooks';
 import type { Resource, ResourceTemplate } from '@modelcontextprotocol/sdk/types.js';
 
 // Collapsible section component for accordion pattern
@@ -66,12 +66,12 @@ export function Resources() {
     isLoading,
     error,
     listChanged,
-    readResource,
+    readResourceTracked,
     subscribe,
     unsubscribe,
     refresh,
     clearListChanged,
-  } = useMcpResources();
+  } = useTrackedMcpResources();
 
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
   const [searchFilter, setSearchFilter] = useState('');
@@ -103,10 +103,10 @@ export function Resources() {
     const fetchContent = async () => {
       setIsReadingResource(true);
       try {
-        const result = await readResource(selectedResource.uri);
+        const { result } = await readResourceTracked(selectedResource.uri);
         // Format the content for display
         const content = result.contents
-          .map((c) => {
+          .map((c: { text?: string; mimeType?: string; blob?: string }) => {
             if ('text' in c) return c.text;
             if ('blob' in c) return `[Binary data: ${c.mimeType || 'unknown'}]`;
             return JSON.stringify(c);
@@ -122,7 +122,9 @@ export function Resources() {
     };
 
     fetchContent();
-  }, [selectedResource, isConnected, readResource]);
+  // Note: readResourceTracked intentionally excluded from deps to prevent infinite loop
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedResource, isConnected]);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
@@ -148,9 +150,9 @@ export function Resources() {
       // Read the resolved resource
       setIsReadingResource(true);
       try {
-        const result = await readResource(resolvedUri);
+        const { result } = await readResourceTracked(resolvedUri);
         const content = result.contents
-          .map((c) => {
+          .map((c: { text?: string; mimeType?: string; blob?: string }) => {
             if ('text' in c) return c.text;
             if ('blob' in c) return `[Binary data: ${c.mimeType || 'unknown'}]`;
             return JSON.stringify(c);

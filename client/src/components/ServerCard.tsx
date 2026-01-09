@@ -61,9 +61,10 @@ interface ServerCardProps {
     oauth?: boolean; // Whether server uses OAuth authentication
   };
   onConnectionModeChange?: (serverId: string, mode: ConnectionMode) => void;
+  onDelete?: () => void;
 }
 
-export function ServerCard({ server, onConnectionModeChange }: ServerCardProps) {
+export function ServerCard({ server, onConnectionModeChange, onDelete }: ServerCardProps) {
   const navigate = useNavigate();
   const [showError, { toggle: toggleError }] = useDisclosure(false);
   const [connectionMode, setConnectionMode] = useState<ConnectionMode>(
@@ -99,7 +100,7 @@ export function ServerCard({ server, onConnectionModeChange }: ServerCardProps) 
 
   const handleRemove = () => {
     if (confirm(`Remove server "${server.name}"?`)) {
-      // TODO: Actually remove the server via proxy API
+      onDelete?.();
     }
   };
 

@@ -15,11 +15,17 @@ import {
   Menu,
 } from '@mantine/core';
 import { IconCopy, IconChevronDown, IconDownload, IconExternalLink } from '@tabler/icons-react';
-import { mockLogs, logLevels, levelColors, initialHistory } from '@/mocks';
+import { useLogs, useHistory } from '@/context';
+import { LOG_LEVELS, LOG_LEVEL_COLORS, type LogLevel } from '@/types/logs';
 import type { RequestInfo } from '@/types/responses';
 
 export function Logs() {
   const navigate = useNavigate();
+
+  // Data from contexts (persisted in localStorage)
+  const { logs, clearAll: clearLogs, exportLogs } = useLogs();
+  const { history } = useHistory();
+
   const [logLevel, setLogLevel] = useState<string | null>('debug');
   const [filter, setFilter] = useState('');
   const [autoScroll, setAutoScroll] = useState(true);
@@ -44,10 +50,10 @@ export function Logs() {
   const uniqueRequests = useMemo((): RequestInfo[] => {
     const requestMap = new Map<string, RequestInfo>();
 
-    mockLogs.forEach(log => {
+    logs.forEach(log => {
       if (log.requestId && !requestMap.has(log.requestId)) {
         // Find matching history entry for method/target info
-        const historyEntry = initialHistory.find(h => h.id === log.requestId);
+        const historyEntry = history.find(h => h.id === log.requestId);
         requestMap.set(log.requestId, {
           id: log.requestId,
           method: historyEntry?.method || log.logger,
@@ -61,9 +67,9 @@ export function Logs() {
     return Array.from(requestMap.values()).sort(
       (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
-  }, []);
+  }, [logs, history]);
 
-  const filteredLogs = mockLogs.filter((log) => {
+  const filteredLogs = logs.filter((log) => {
     const matchesFilter = filter === '' || log.message.toLowerCase().includes(filter.toLowerCase());
     const matchesLevel = visibleLevels[log.level as keyof typeof visibleLevels] ?? true;
 
@@ -71,7 +77,7 @@ export function Logs() {
     let matchesRequest = true;
     if (selectedRequestId) {
       // Get the parent ID if this is a child request
-      const selectedLog = mockLogs.find(l => l.requestId === selectedRequestId);
+      const selectedLog = logs.find(l => l.requestId === selectedRequestId);
       const parentId = selectedLog?.parentRequestId || selectedRequestId;
 
       // Include logs that match:
@@ -96,23 +102,22 @@ export function Logs() {
   const handleViewInHistory = () => {
     if (selectedRequestId) {
       // Find the root request ID for navigation
-      const selectedLog = mockLogs.find(l => l.requestId === selectedRequestId);
+      const selectedLog = logs.find(l => l.requestId === selectedRequestId);
       const rootId = selectedLog?.parentRequestId || selectedRequestId;
       navigate(`/history?highlight=${rootId}`);
     }
   };
 
+  const handleClearLogs = () => {
+    if (confirm('Clear all logs?')) {
+      clearLogs();
+    }
+  };
+
   // Export as JSON
   const handleExportJson = () => {
-    const exportData = filteredLogs.map((log) => ({
-      timestamp: log.timestamp,
-      level: log.level,
-      message: log.message,
-      logger: log.logger,
-    }));
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: 'application/json',
-    });
+    const dataStr = exportLogs('json');
+    const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -125,12 +130,8 @@ export function Logs() {
 
   // Export as Text
   const handleExportText = () => {
-    const lines = filteredLogs.map(
-      (log) => `[${log.timestamp}] [${log.level.toUpperCase()}] [${log.logger}] ${log.message}`
-    );
-    const blob = new Blob([lines.join('\n')], {
-      type: 'text/plain',
-    });
+    const dataStr = exportLogs('text');
+    const blob = new Blob([dataStr], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -143,10 +144,8 @@ export function Logs() {
 
   // Copy all logs to clipboard
   const handleCopyAll = () => {
-    const lines = filteredLogs.map(
-      (log) => `[${log.timestamp}] [${log.level.toUpperCase()}] [${log.logger}] ${log.message}`
-    );
-    navigator.clipboard.writeText(lines.join('\n'));
+    const text = exportLogs('text');
+    navigator.clipboard.writeText(text);
   };
 
   return (
@@ -164,7 +163,7 @@ export function Logs() {
                   size="sm"
                   value={logLevel}
                   onChange={setLogLevel}
-                  data={logLevels.map((level) => ({
+                  data={LOG_LEVELS.map((level) => ({
                     value: level,
                     label: level.charAt(0).toUpperCase() + level.slice(1),
                   }))}
@@ -193,7 +192,7 @@ export function Logs() {
                     checked={checked}
                     onChange={() => toggleLevel(level)}
                     label={
-                      <Text size="sm" tt="uppercase" c={levelColors[level]}>
+                      <Text size="sm" tt="uppercase" c={LOG_LEVEL_COLORS[level as LogLevel]}>
                         {level}
                       </Text>
                     }
@@ -229,7 +228,7 @@ export function Logs() {
 
             {/* Actions */}
             <Group gap="sm">
-              <Button variant="outline" size="sm" flex={1}>
+              <Button variant="outline" size="sm" flex={1} onClick={handleClearLogs}>
                 Clear
               </Button>
               {/* Export dropdown menu */}
@@ -310,7 +309,7 @@ export function Logs() {
                     {new Date(log.timestamp).toLocaleTimeString()}
                   </Text>
                   <Badge
-                    color={levelColors[log.level]}
+                    color={LOG_LEVEL_COLORS[log.level]}
                     variant="light"
                     size="sm"
                     tt="uppercase"
@@ -318,7 +317,7 @@ export function Logs() {
                   >
                     {log.level}
                   </Badge>
-                  <Text size="sm" c={levelColors[log.level]}>
+                  <Text size="sm" c={LOG_LEVEL_COLORS[log.level]}>
                     {log.message}
                   </Text>
                 </Group>

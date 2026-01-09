@@ -24,7 +24,7 @@ import {
   useMcp,
   generateRequestId,
 } from '@/context';
-import { useMcpTools, useSamplingHandler } from '@/hooks';
+import { useTrackedMcpTools, useSamplingHandler } from '@/hooks';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import type { SamplingResponse } from '../components/SamplingRequestCard';
 
@@ -38,7 +38,15 @@ export function Tools() {
 
   // MCP connection and tools
   const { isConnected } = useMcp();
-  const { tools, isLoading: toolsLoading, error: toolsError, listChanged, refresh, clearListChanged } = useMcpTools();
+  const {
+    tools,
+    isLoading: toolsLoading,
+    error: toolsError,
+    listChanged,
+    refresh,
+    clearListChanged,
+    executeToolTracked,
+  } = useTrackedMcpTools();
 
   // Use ExecutionContext for execution state
   const { state, dispatch } = useExecution();
@@ -77,8 +85,6 @@ export function Tools() {
     clearListChanged();
   };
 
-  const { executeTool } = useMcpTools();
-
   const handleExecute = async () => {
     if (!selectedTool) return;
 
@@ -113,8 +119,8 @@ export function Tools() {
         progress: { current: 50, total: 100, message: 'Executing tool...' },
       });
 
-      // Execute the real tool
-      const result = await executeTool(selectedTool.name, args);
+      // Execute tool with tracking (logs to history and logs contexts)
+      const result = await executeToolTracked(selectedTool.name, args);
 
       dispatch({
         type: 'UPDATE_PROGRESS',

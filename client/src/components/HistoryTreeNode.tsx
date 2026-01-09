@@ -16,7 +16,7 @@ import {
   IconPin,
   IconPinnedOff,
 } from '@tabler/icons-react';
-import type { HistoryEntry } from '@/mocks';
+import type { HistoryEntry } from '@/types/history';
 import {
   formatRelativeTime,
   getChildSummary,

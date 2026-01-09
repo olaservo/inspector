@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Container,
   Title,
@@ -16,11 +16,30 @@ import {
 } from '@mantine/core';
 import { IconPlugConnected, IconPlugConnectedX, IconAlertCircle } from '@tabler/icons-react';
 import { ServerCard, ConnectionMode } from '../components/ServerCard';
-import { AddServerModal, ServerConfig } from '../components/AddServerModal';
+import type { MockServer } from '@/mocks/servers';
+import { AddServerModal, ServerConfig as AddServerConfig } from '../components/AddServerModal';
 import { ImportServerJsonModal } from '../components/ImportServerJsonModal';
 import { showInfoToast, showSuccessToast, showErrorToast } from '../lib/toast';
-import { useMcp } from '@/context';
-import { mockServers } from '@/mocks';
+import { useMcp, useServerConfig } from '@/context';
+import type { ServerConfig } from '@/types/servers';
+
+/**
+ * Convert ServerConfig to MockServer format for ServerCard display.
+ * ServerConfig is persisted configuration; MockServer includes runtime state.
+ */
+function configToMockServer(config: ServerConfig): MockServer {
+  return {
+    id: config.id,
+    name: config.name,
+    version: '', // Unknown until connected
+    transport: config.transport,
+    command: config.command,
+    url: config.url,
+    status: 'disconnected', // Default to disconnected
+    capabilities: null, // Unknown until connected
+    connectionMode: config.connectionMode,
+  };
+}
 
 export function ServerList() {
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -29,6 +48,14 @@ export function ServerList() {
 
   // MCP connection state
   const { connect, disconnect, connectionState, serverInfo, error } = useMcp();
+
+  // Server configurations from localStorage
+  const { servers, addServer, deleteServer, isLoaded } = useServerConfig();
+
+  // Convert stored configs to MockServer format for display
+  const displayServers = useMemo(() => {
+    return servers.map(configToMockServer);
+  }, [servers]);
 
   const handleConnect = async () => {
     if (!serverUrl.trim()) {
@@ -53,18 +80,41 @@ export function ServerList() {
     showInfoToast('Disconnected', 'Disconnected from MCP server');
   };
 
-  const handleSaveServer = (_config: ServerConfig) => {
-    // TODO: Actually save the server config
+  const handleSaveServer = (config: AddServerConfig) => {
+    addServer({
+      name: config.name,
+      transport: config.transport as 'http' | 'stdio',
+      url: config.transport === 'http' ? config.url : undefined,
+      command: config.transport === 'stdio' ? config.command : undefined,
+      env: config.env,
+      connectionMode: config.transport === 'http' ? 'direct' : 'proxy',
+    });
+    showSuccessToast('Server Added', `Added ${config.name} to server list`);
+    setAddModalOpen(false);
   };
 
-  const handleImportServerJson = (_config: {
+  const handleImportServerJson = (config: {
     name: string;
     transport: string;
     command?: string;
     url?: string;
     env: Record<string, string>;
   }) => {
-    // TODO: Actually save the imported server config
+    addServer({
+      name: config.name,
+      transport: config.transport as 'http' | 'stdio',
+      url: config.url,
+      command: config.command,
+      env: config.env,
+      connectionMode: config.transport === 'http' ? 'direct' : 'proxy',
+    });
+    showSuccessToast('Server Imported', `Imported ${config.name} from server.json`);
+    setImportJsonModalOpen(false);
+  };
+
+  const handleDeleteServer = (serverId: string) => {
+    deleteServer(serverId);
+    showInfoToast('Server Removed', 'Server removed from list');
   };
 
   const handleImportConfig = () => {
@@ -165,15 +215,29 @@ export function ServerList() {
         </Stack>
       </Card>
 
-      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
-        {mockServers.map((server) => (
-          <ServerCard
-            key={server.id}
-            server={server}
-            onConnectionModeChange={handleConnectionModeChange}
-          />
-        ))}
-      </SimpleGrid>
+      {/* Saved Servers from localStorage */}
+      {isLoaded && displayServers.length > 0 && (
+        <>
+          <Text size="sm" c="dimmed" mb="sm">Saved Servers</Text>
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+            {displayServers.map((server) => (
+              <ServerCard
+                key={server.id}
+                server={server}
+                onConnectionModeChange={handleConnectionModeChange}
+                onDelete={() => handleDeleteServer(server.id)}
+              />
+            ))}
+          </SimpleGrid>
+        </>
+      )}
+
+      {/* Empty state */}
+      {isLoaded && displayServers.length === 0 && (
+        <Card withBorder p="xl" ta="center">
+          <Text c="dimmed">No saved servers. Use "Add Server" to add one, or use Quick Connect above.</Text>
+        </Card>
+      )}
 
       <AddServerModal
         open={addModalOpen}

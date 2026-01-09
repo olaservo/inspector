@@ -1,4 +1,4 @@
-import type { HistoryEntry } from '@/mocks';
+import type { HistoryEntry } from '@/types/history';
 
 /**
  * Get root entries (entries without a parentRequestId)

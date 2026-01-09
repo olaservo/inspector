@@ -19,7 +19,8 @@ import {
   IconList,
   IconHierarchy,
 } from '@tabler/icons-react';
-import { initialHistory, type HistoryEntry } from '@/mocks';
+import { useHistory } from '@/context';
+import type { HistoryEntry } from '@/types/history';
 import { HistoryTreeNode } from '@/components/HistoryTreeNode';
 import { getRootEntries, buildChildrenMap } from '@/lib/historyUtils';
 
@@ -30,7 +31,14 @@ export function History() {
   const [searchParams] = useSearchParams();
   const highlightId = searchParams.get('highlight');
 
-  const [history, setHistory] = useState<HistoryEntry[]>(initialHistory);
+  // History from context (persisted in localStorage)
+  const {
+    history,
+    togglePin: contextTogglePin,
+    clearAll,
+    exportHistory,
+  } = useHistory();
+
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [searchFilter, setSearchFilter] = useState('');
   const [methodFilter, setMethodFilter] = useState<string | null>(null);
@@ -67,20 +75,18 @@ export function History() {
   };
 
   const togglePin = (id: string) => {
-    setHistory((prev) =>
-      prev.map((entry) =>
-        entry.id === id ? { ...entry, pinned: !entry.pinned } : entry
-      )
-    );
+    contextTogglePin(id);
   };
 
   const handleClearAll = () => {
-    setHistory([]);
+    if (confirm('Clear all non-pinned history entries?')) {
+      clearAll();
+    }
   };
 
   // Export history as JSON
   const handleExport = () => {
-    const dataStr = JSON.stringify(history, null, 2);
+    const dataStr = exportHistory();
     const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
     const link = document.createElement('a');
     link.setAttribute('href', dataUri);

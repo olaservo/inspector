@@ -17,7 +17,7 @@ import {
 import { IconPlugConnectedX, IconAlertCircle } from '@tabler/icons-react';
 import { ListChangedIndicator } from '../components/ListChangedIndicator';
 import { useMcp } from '@/context';
-import { useMcpPrompts } from '@/hooks';
+import { useTrackedMcpPrompts } from '@/hooks';
 import type { Prompt, PromptMessage } from '@modelcontextprotocol/sdk/types.js';
 
 export function Prompts() {
@@ -27,10 +27,10 @@ export function Prompts() {
     isLoading,
     error,
     listChanged,
-    getPrompt,
+    getPromptTracked,
     refresh,
     clearListChanged,
-  } = useMcpPrompts();
+  } = useTrackedMcpPrompts();
 
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [promptArgs, setPromptArgs] = useState<Record<string, string>>({});
@@ -74,7 +74,8 @@ export function Prompts() {
     setPromptResult(null);
 
     try {
-      const result = await getPrompt(selectedPrompt.name, promptArgs);
+      // Use tracked version to log to history and logs contexts
+      const { result } = await getPromptTracked(selectedPrompt.name, promptArgs);
       setPromptResult(result.messages || []);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to get prompt';
