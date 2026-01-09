@@ -1,3 +1,8 @@
+/**
+ * Mock data for authentication and client requests
+ * Types are re-exported from @/types for backwards compatibility
+ */
+
 // Re-export types from proper types directory
 export type {
   SamplingMessage,
@@ -9,27 +14,12 @@ export type {
   ElicitationRequest,
 } from '@/types/clientRequests';
 
+export type { OAuthState, Root } from '@/types/auth';
+
 import type { SamplingRequest, ElicitationFormRequest, ElicitationUrlRequest } from '@/types/clientRequests';
+import type { OAuthState, Root } from '@/types/auth';
 
-// OAuth State
-export interface OAuthState {
-  authorizationUrl?: string;
-  authorizationCode?: string;
-  state?: string;
-  stateVerified?: boolean;
-  tokenEndpoint?: string;
-  accessToken?: string;
-  tokenType?: string;
-  expiresIn?: number;
-  expiresAt?: Date;
-  refreshToken?: string;
-  scopes?: string[];
-  decodedToken?: {
-    header: Record<string, unknown>;
-    payload: Record<string, unknown>;
-  };
-}
-
+// Mock OAuth state data
 export const mockOAuthState: OAuthState = {
   authorizationUrl: 'https://auth.example.com/authorize?client_id=my-client-id&redirect_uri=http://localhost:5173/callback&response_type=code&scope=read%20write&state=abc123xyz',
   authorizationCode: 'xyz789def456abc123',
@@ -54,6 +44,7 @@ export const mockOAuthState: OAuthState = {
   },
 };
 
+// Mock sampling request
 export const mockSamplingRequest: SamplingRequest = {
   messages: [
     {
@@ -142,7 +133,7 @@ export const mockSamplingWithToolsRequest: SamplingRequest = {
   toolChoice: { type: 'auto' },
 };
 
-// Mock elicitation data
+// Mock elicitation form request
 export const mockFormRequest: ElicitationFormRequest = {
   mode: 'form',
   message: 'Please provide your database connection details to proceed.',
@@ -180,6 +171,7 @@ export const mockFormRequest: ElicitationFormRequest = {
   serverName: 'database-connector',
 };
 
+// Mock elicitation URL request
 export const mockUrlRequest: ElicitationUrlRequest = {
   mode: 'url',
   message: 'Please complete the OAuth authorization in your browser.',
@@ -188,12 +180,7 @@ export const mockUrlRequest: ElicitationUrlRequest = {
   serverName: 'oauth-server',
 };
 
-// Roots types
-export interface Root {
-  name: string;
-  uri: string;
-}
-
+// Initial roots data
 export const initialRoots: Root[] = [
   { name: 'Project', uri: 'file:///home/user/myproject' },
   { name: 'Documents', uri: 'file:///home/user/Documents' },

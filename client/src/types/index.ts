@@ -4,7 +4,11 @@
 export * from './history';
 export * from './logs';
 export * from './servers';
-
-// Re-export existing types
 export * from './clientRequests';
 export * from './responses';
+
+// Additional types
+export * from './testingProfiles';
+export * from './capabilities';
+export * from './tasks';
+export * from './auth';

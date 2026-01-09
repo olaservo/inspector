@@ -1,26 +1,20 @@
-// Testing Profiles for Sampling/Elicitation Response Strategies
+/**
+ * Mock testing profiles for sampling/elicitation
+ * Types are re-exported from @/types for backwards compatibility
+ */
 
-export type SamplingProviderType = 'manual' | 'mock';
+// Re-export types from proper types directory
+export type {
+  SamplingProviderType,
+  ModelOverride,
+  TestingProfile,
+} from '@/types/testingProfiles';
 
-export interface ModelOverride {
-  pattern: string; // e.g., "claude-*", "gpt-*"
-  response: string;
-}
+export { getResponseForModelHint } from '@/types/testingProfiles';
 
-export interface TestingProfile {
-  id: string;
-  name: string;
-  description?: string;
-  samplingProvider: SamplingProviderType;
-  autoRespond: boolean;
-  defaultResponse?: string;
-  defaultModel?: string;
-  defaultStopReason?: 'endTurn' | 'stopSequence' | 'maxTokens' | 'toolUse';
-  modelOverrides?: ModelOverride[];
-  elicitationAutoRespond?: boolean;
-  elicitationDefaults?: Record<string, unknown>;
-}
+import type { TestingProfile } from '@/types/testingProfiles';
 
+// Default testing profiles
 export const mockTestingProfiles: TestingProfile[] = [
   {
     id: 'manual',
@@ -80,25 +74,3 @@ export const mockTestingProfiles: TestingProfile[] = [
     elicitationDefaults: {},
   },
 ];
-
-// Helper to get response for a model hint
-export function getResponseForModelHint(
-  profile: TestingProfile,
-  modelHints?: string[]
-): string {
-  if (!profile.modelOverrides || !modelHints || modelHints.length === 0) {
-    return profile.defaultResponse || '';
-  }
-
-  // Check each hint against patterns
-  for (const hint of modelHints) {
-    for (const override of profile.modelOverrides) {
-      const pattern = override.pattern.replace('*', '.*');
-      if (new RegExp(`^${pattern}$`).test(hint)) {
-        return override.response;
-      }
-    }
-  }
-
-  return profile.defaultResponse || '';
-}

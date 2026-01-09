@@ -1,24 +1,15 @@
-export interface ActiveTask {
-  id: string;
-  method: string;
-  name: string;
-  status: 'running' | 'waiting';
-  progress: number;
-  progressMessage: string | null;
-  startedAt: string;
-}
+/**
+ * Mock task data for testing
+ * Types are re-exported from @/types for backwards compatibility
+ */
 
-export interface CompletedTask {
-  id: string;
-  method: string;
-  name: string;
-  status: 'completed' | 'failed';
-  progress: number;
-  startedAt: string;
-  completedAt: string;
-  error?: string;
-}
+// Re-export types from proper types directory
+export type { ActiveTask, CompletedTask } from '@/types/tasks';
+export { taskStatusColors } from '@/types/tasks';
 
+import type { ActiveTask, CompletedTask } from '@/types/tasks';
+
+// Mock active tasks
 export const mockActiveTasks: ActiveTask[] = [
   {
     id: 'abc-123',
@@ -40,6 +31,7 @@ export const mockActiveTasks: ActiveTask[] = [
   },
 ];
 
+// Mock completed tasks
 export const mockCompletedTasks: CompletedTask[] = [
   {
     id: 'ghi-789',
@@ -61,11 +53,3 @@ export const mockCompletedTasks: CompletedTask[] = [
     completedAt: '2025-11-30T14:28:15Z',
   },
 ];
-
-export const taskStatusColors: Record<string, string> = {
-  waiting: 'gray',
-  running: 'blue',
-  completed: 'green',
-  failed: 'red',
-  cancelled: 'orange',
-};
