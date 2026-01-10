@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Container,
   Title,
@@ -14,7 +15,7 @@ import {
   Loader,
   Alert,
 } from '@mantine/core';
-import { IconPlugConnected, IconPlugConnectedX, IconAlertCircle } from '@tabler/icons-react';
+import { IconPlugConnected, IconPlugConnectedX, IconAlertCircle, IconArrowRight } from '@tabler/icons-react';
 import { ServerCard, ConnectionMode } from '../components/ServerCard';
 import type { MockServer } from '@/types';
 import { AddServerModal, ServerConfig as AddServerConfig } from '../components/AddServerModal';
@@ -198,10 +199,31 @@ export function ServerList() {
                 <Text size="xs" c="dimmed" mt={4}>{serverInfo.instructions}</Text>
               )}
               <Group gap="xs" mt="xs">
-                {serverInfo.capabilities.tools && <Badge size="xs" variant="outline">Tools</Badge>}
-                {serverInfo.capabilities.resources && <Badge size="xs" variant="outline">Resources</Badge>}
-                {serverInfo.capabilities.prompts && <Badge size="xs" variant="outline">Prompts</Badge>}
-                {serverInfo.capabilities.logging && <Badge size="xs" variant="outline">Logging</Badge>}
+                {serverInfo.capabilities.tools && (
+                  <Badge component={Link} to="/tools" size="xs" variant="outline" style={{ cursor: 'pointer' }}>
+                    Tools
+                  </Badge>
+                )}
+                {serverInfo.capabilities.resources && (
+                  <Badge component={Link} to="/resources" size="xs" variant="outline" style={{ cursor: 'pointer' }}>
+                    Resources
+                  </Badge>
+                )}
+                {serverInfo.capabilities.prompts && (
+                  <Badge component={Link} to="/prompts" size="xs" variant="outline" style={{ cursor: 'pointer' }}>
+                    Prompts
+                  </Badge>
+                )}
+                {serverInfo.capabilities.logging && (
+                  <Badge component={Link} to="/logs" size="xs" variant="outline" style={{ cursor: 'pointer' }}>
+                    Logging
+                  </Badge>
+                )}
+              </Group>
+              <Group mt="md">
+                <Button component={Link} to="/tools" size="sm" rightSection={<IconArrowRight size={14} />}>
+                  Go to Tools
+                </Button>
               </Group>
             </Alert>
           )}
