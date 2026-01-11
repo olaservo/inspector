@@ -12,9 +12,18 @@ import {
   Paper,
   ActionIcon,
   Table,
+  NumberInput,
+  Slider,
 } from '@mantine/core';
 import { IconPlus, IconTrash } from '@tabler/icons-react';
-import type { TestingProfile, SamplingProviderType, ModelOverride } from '@/types';
+import type {
+  TestingProfile,
+  SamplingProviderType,
+  ModelOverride,
+  AiSdkProviderConfig,
+  AiSdkProviderName,
+  ModelHintBehavior,
+} from '@/types';
 
 interface TestingProfileEditorProps {
   profile: TestingProfile;
@@ -51,6 +60,27 @@ export function TestingProfileEditor({
     profile.elicitationAutoRespond || false
   );
 
+  // AI SDK config state
+  const [aiSdkProvider, setAiSdkProvider] = useState<AiSdkProviderName>(
+    profile.aiSdkConfig?.provider || 'anthropic'
+  );
+  const [aiSdkModelId, setAiSdkModelId] = useState(
+    profile.aiSdkConfig?.modelId || ''
+  );
+  const [aiSdkBaseUrl, setAiSdkBaseUrl] = useState(
+    profile.aiSdkConfig?.baseUrl || ''
+  );
+  const [aiSdkTemperature, setAiSdkTemperature] = useState<number | undefined>(
+    profile.aiSdkConfig?.defaultTemperature
+  );
+  const [aiSdkMaxTokens, setAiSdkMaxTokens] = useState<number | undefined>(
+    profile.aiSdkConfig?.defaultMaxTokens
+  );
+  const [aiSdkModelHintBehavior, setAiSdkModelHintBehavior] =
+    useState<ModelHintBehavior>(
+      profile.aiSdkConfig?.modelHintBehavior || 'prefer-hint'
+    );
+
   // Reset form when profile changes
   useEffect(() => {
     setName(profile.name);
@@ -62,6 +92,15 @@ export function TestingProfileEditor({
     setDefaultStopReason(profile.defaultStopReason || 'endTurn');
     setModelOverrides(profile.modelOverrides || []);
     setElicitationAutoRespond(profile.elicitationAutoRespond || false);
+    // AI SDK config
+    setAiSdkProvider(profile.aiSdkConfig?.provider || 'anthropic');
+    setAiSdkModelId(profile.aiSdkConfig?.modelId || '');
+    setAiSdkBaseUrl(profile.aiSdkConfig?.baseUrl || '');
+    setAiSdkTemperature(profile.aiSdkConfig?.defaultTemperature);
+    setAiSdkMaxTokens(profile.aiSdkConfig?.defaultMaxTokens);
+    setAiSdkModelHintBehavior(
+      profile.aiSdkConfig?.modelHintBehavior || 'prefer-hint'
+    );
   }, [profile]);
 
   // Validation
@@ -77,7 +116,17 @@ export function TestingProfileEditor({
     return null;
   })();
 
-  const isValid = !nameError;
+  const aiSdkModelError = (() => {
+    if (samplingProvider === 'ai-sdk' && !aiSdkModelId.trim()) {
+      return 'Model ID is required for AI SDK provider';
+    }
+    if (samplingProvider === 'ai-sdk' && aiSdkProvider === 'custom' && !aiSdkBaseUrl.trim()) {
+      return 'Base URL is required for custom provider';
+    }
+    return null;
+  })();
+
+  const isValid = !nameError && !aiSdkModelError;
 
   // Model overrides handlers
   const addOverride = () => {
@@ -102,6 +151,23 @@ export function TestingProfileEditor({
   const handleSave = () => {
     if (!isValid) return;
 
+    // Build AI SDK config if that provider is selected
+    const aiSdkConfig: AiSdkProviderConfig | undefined =
+      samplingProvider === 'ai-sdk'
+        ? {
+            provider: aiSdkProvider,
+            modelId: aiSdkModelId.trim(),
+            modelHintBehavior: aiSdkModelHintBehavior,
+            ...(aiSdkBaseUrl.trim() && { baseUrl: aiSdkBaseUrl.trim() }),
+            ...(aiSdkTemperature !== undefined && {
+              defaultTemperature: aiSdkTemperature,
+            }),
+            ...(aiSdkMaxTokens !== undefined && {
+              defaultMaxTokens: aiSdkMaxTokens,
+            }),
+          }
+        : undefined;
+
     const updatedProfile: TestingProfile = {
       id: profile.id,
       name: name.trim(),
@@ -117,6 +183,7 @@ export function TestingProfileEditor({
           : undefined,
       elicitationAutoRespond,
       elicitationDefaults: profile.elicitationDefaults,
+      aiSdkConfig,
     };
 
     onSave(updatedProfile);
@@ -162,6 +229,7 @@ export function TestingProfileEditor({
           data={[
             { value: 'manual', label: 'Manual' },
             { value: 'mock', label: 'Mock/Template' },
+            { value: 'ai-sdk', label: 'AI SDK (Real LLM)' },
           ]}
         />
 
@@ -282,6 +350,111 @@ export function TestingProfileEditor({
                 </Table>
               )}
             </Stack>
+          </>
+        )}
+
+        {/* AI SDK Configuration */}
+        {samplingProvider === 'ai-sdk' && (
+          <>
+            <Select
+              label="LLM Provider"
+              description="Which LLM provider to use"
+              value={aiSdkProvider}
+              onChange={(v) => setAiSdkProvider(v as AiSdkProviderName)}
+              data={[
+                { value: 'anthropic', label: 'Anthropic (Claude)' },
+                { value: 'openai', label: 'OpenAI (GPT)' },
+                { value: 'custom', label: 'Custom (OpenAI-compatible)' },
+              ]}
+            />
+
+            {aiSdkProvider === 'custom' && (
+              <TextInput
+                label="Base URL"
+                placeholder="https://api.example.com/v1"
+                description="Base URL for custom OpenAI-compatible API"
+                value={aiSdkBaseUrl}
+                onChange={(e) => setAiSdkBaseUrl(e.target.value)}
+                required
+              />
+            )}
+
+            <TextInput
+              label="Model ID"
+              placeholder={
+                aiSdkProvider === 'anthropic'
+                  ? 'claude-sonnet-4-20250514'
+                  : aiSdkProvider === 'openai'
+                    ? 'gpt-4o'
+                    : 'model-id'
+              }
+              description="The model identifier to use"
+              value={aiSdkModelId}
+              onChange={(e) => setAiSdkModelId(e.target.value)}
+              error={aiSdkModelError}
+              required
+            />
+
+            <Select
+              label="Model Hint Behavior"
+              description="How to handle model hints from the server"
+              value={aiSdkModelHintBehavior}
+              onChange={(v) => setAiSdkModelHintBehavior(v as ModelHintBehavior)}
+              data={[
+                {
+                  value: 'ignore',
+                  label: 'Ignore hints (always use configured model)',
+                },
+                {
+                  value: 'prefer-hint',
+                  label: 'Prefer hints (use hint if available)',
+                },
+                {
+                  value: 'require-match',
+                  label: 'Require match (only respond if hint matches)',
+                },
+              ]}
+            />
+
+            <Group grow>
+              <div>
+                <Text size="sm" fw={500} mb={4}>
+                  Temperature
+                </Text>
+                <Text size="xs" c="dimmed" mb="xs">
+                  Controls randomness (0 = focused, 2 = creative)
+                </Text>
+                <Slider
+                  value={aiSdkTemperature ?? 1}
+                  onChange={setAiSdkTemperature}
+                  min={0}
+                  max={2}
+                  step={0.1}
+                  marks={[
+                    { value: 0, label: '0' },
+                    { value: 1, label: '1' },
+                    { value: 2, label: '2' },
+                  ]}
+                />
+              </div>
+
+              <NumberInput
+                label="Max Tokens"
+                description="Maximum tokens in response"
+                placeholder="4096"
+                value={aiSdkMaxTokens}
+                onChange={(v) =>
+                  setAiSdkMaxTokens(typeof v === 'number' ? v : undefined)
+                }
+                min={1}
+                max={128000}
+              />
+            </Group>
+
+            <Text size="xs" c="dimmed" fs="italic">
+              API key will be requested when this profile is activated. Keys are
+              not stored.
+            </Text>
           </>
         )}
 
