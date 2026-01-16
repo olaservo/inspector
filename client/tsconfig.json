@@ -17,9 +17,10 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@llm-terminal/*": ["../../plugins/llm-terminal/client/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "../../plugins/llm-terminal/client"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

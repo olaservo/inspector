@@ -37,6 +37,12 @@ import {
 } from '@/lib/mcp/client';
 import { createHttpTransport, createAuthenticatedTransport } from '@/lib/mcp/transport';
 
+/**
+ * Error category for connection failures.
+ * Helps users understand what went wrong and whether to retry.
+ */
+export type ErrorCategory = 'network' | 'auth' | 'protocol' | 'timeout' | 'validation' | 'unknown';
+
 // Connection state
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
