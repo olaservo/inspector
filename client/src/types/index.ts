@@ -12,4 +12,3 @@ export * from './testingProfiles';
 export * from './capabilities';
 export * from './tasks';
 export * from './auth';
-export * from './providers';
