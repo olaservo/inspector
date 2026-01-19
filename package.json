@@ -5,18 +5,9 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "core",
-    "client"
+    "core"
   ],
-  "scripts": {
-    "test": "playwright test",
-    "test:smoke": "playwright test tests/smoke/",
-    "test:e2e": "playwright test tests/e2e/",
-    "test:ui": "playwright test --ui",
-    "test:report": "playwright show-report"
-  },
   "devDependencies": {
-    "@playwright/test": "^1.49.0",
     "@types/node": "^22.0.0",
     "typescript": "^5.7.0"
   },
