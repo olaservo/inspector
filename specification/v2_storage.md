@@ -481,5 +481,5 @@ client/src/stores/
 
 - [Issue #983](https://github.com/modelcontextprotocol/inspector/issues/983) - Data spec discussion
 - [Discussion #1805](https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/1805) - Server config storage decision
-- [MCPJam Inspector](https://github.com/anthropics/mcpjam) - Reference implementation using Zustand
+- [MCPJam Inspector](https://github.com/MCPJam/inspector) - Reference implementation using Zustand
 - [Zustand documentation](https://docs.pmnd.rs/zustand/getting-started/introduction)
