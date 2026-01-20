@@ -2,6 +2,7 @@
 
 ### [Brief](README.md) | V1 Problems | [V2 Scope](v2_scope.md) | [V2 Tech Stack](v2_tech_stack.md)
 ### UX: [Overview](v2_ux.md) | [Features](v2_ux_features.md) | [Handlers](v2_ux_handlers.md) | [Screenshots](v2_screenshots.md)
+### Implementation: [Logic](v2_logic.md) | [Proxy](v2_proxy.md)
 
 ## Table of Contents
   * [Monolithic components](#monolithic-components)
