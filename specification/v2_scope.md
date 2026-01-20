@@ -45,9 +45,9 @@
   * Basic (non debugger) Flow  
 
 ## Transport Types
-  * STDIO  
-  * SSE  
-  * SHTTP  
+  * STDIO (`stdio`)
+  * SSE (`sse`)
+  * Streamable HTTP (`streamableHttp`)  
 
 ## Connection Type
   * Direct   
