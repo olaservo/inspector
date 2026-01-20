@@ -95,7 +95,7 @@
 
 ## Server file maintenance
   * Opening screen similar to MCPJam servers list  
-  * Adding, changing, and deleting a server would hit endpoints on the proxy server update the inspector’s servers.json config file
+  * Adding, changing, and deleting a server would hit endpoints on the proxy server to update the inspector's `mcp.json` config file
 
 ## Plugin architecture
   * Allow third parties to extend the Inspector with functionality we do not wish to maintain, but which would still be useful to developers within the context of the Inspector, e.g., LLMs, evals, OpenAI Apps SDK playground  
