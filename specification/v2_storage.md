@@ -411,8 +411,7 @@ This pattern:
 |           v                v                                      |
 |  +--------------------------------------------------------+      |
 |  |              Core Package Interfaces                    |      |
-|  |  - ServerConfigRepository  - ConnectionService          |      |
-|  |  - HistoryRepository       - ExecutionService           |      |
+|  |  - ServerConfigRepository  - HistoryRepository          |      |
 |  |  - LogsRepository          - TestingProfileRepository   |      |
 |  +------------------------+-------------------------------+      |
 +---------------------------|-----------------------------------+
@@ -422,9 +421,8 @@ This pattern:
             |    Core Package (React-free)  |
             |  - MCP Client lifecycle       |
             |  - Transport creation         |
-            |  - Handler interfaces         |
+            |  - Handler functions          |
             |  - Type definitions           |
-            |  - Memory implementations     |
             +-------------------------------+
 ```
 
