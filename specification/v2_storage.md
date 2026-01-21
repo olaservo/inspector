@@ -108,7 +108,6 @@ See [v2_tech_stack.md](./v2_tech_stack.md#pino-rationale) for Pino configuration
 
 **Cons:**
 - Less intuitive for imperative state updates
-- Requires Provider at React root
 - Smaller ecosystem than Zustand
 
 **Verdict:** Good alternative, but less proven in MCP tooling context
