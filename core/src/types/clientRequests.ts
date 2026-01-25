@@ -3,14 +3,35 @@
  * Per MCP 2025-11-25 specification
  */
 
-import type { ToolDefinition, ToolChoice } from './responses';
+import type { ToolDefinition, ToolChoice, ToolCall } from './responses';
 
-// Sampling message content
+// Tool use content block (in assistant messages)
+export interface ToolUseContent {
+  type: 'tool_use';
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+}
+
+// Tool result content block (in user messages following tool use)
+export interface ToolResultContent {
+  type: 'tool_result';
+  toolUseId: string;
+  content: Array<{ type: 'text'; text: string }>;
+  isError?: boolean;
+}
+
+// All possible content types in sampling messages
+export type SamplingContentBlock =
+  | { type: 'text'; text: string }
+  | { type: 'image'; data: string; mimeType: string }
+  | ToolUseContent
+  | ToolResultContent;
+
+// Sampling message with support for tool calling
 export interface SamplingMessage {
   role: 'user' | 'assistant';
-  content:
-    | { type: 'text'; text: string }
-    | { type: 'image'; data: string; mimeType: string };
+  content: SamplingContentBlock | SamplingContentBlock[];
 }
 
 // Model preferences for sampling

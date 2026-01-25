@@ -1,8 +1,9 @@
 /**
- * Data Layer Interfaces
+ * Data Layer Interfaces and Implementations
  *
  * Repository interfaces define CRUD contracts for data storage.
- * Implementations (proxy API, file-based, localStorage) to be added
+ * Memory implementations provided for development and testing.
+ * Production implementations (proxy API, file-based) to be added
  * when proxy server is built.
  *
  * Note: Connection/execution state management is handled by UI-specific
@@ -18,3 +19,12 @@ export type {
   LogsListOptions,
   TestingProfileRepository,
 } from './repositories.js';
+
+// In-memory implementations for development and testing
+export {
+  createMemoryServerConfigRepository,
+  createMemoryHistoryRepository,
+  createMemoryLogsRepository,
+  createMemoryTestingProfileRepository,
+  getDefaultTestingProfiles,
+} from './memory/index.js';

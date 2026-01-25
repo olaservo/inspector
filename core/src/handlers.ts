@@ -18,8 +18,20 @@ import {
   type ElicitRequest,
   type ElicitResult,
 } from '@modelcontextprotocol/sdk/types.js';
-import type { SamplingRequest, ElicitationRequest } from './types/clientRequests.js';
-import type { SamplingResponse } from './types/responses.js';
+import type {
+  SamplingRequest,
+  ElicitationRequest,
+  SamplingMessage,
+  SamplingContentBlock,
+} from './types/clientRequests.js';
+import type { SamplingResponse, ToolDefinition, ToolChoice, ToolCall } from './types/responses.js';
+import type { TestingProfile } from './types/testingProfiles.js';
+import { getResponseForModelHint } from './types/testingProfiles.js';
+
+/**
+ * Approval mode for sampling/elicitation requests
+ */
+export type ApprovalMode = 'ask' | 'auto' | 'deny';
 
 // Response resolvers - keyed by request ID
 const samplingResolvers = new Map<
@@ -58,22 +70,100 @@ export function generateElicitationRequestId(): string {
 /**
  * Convert a single SDK content item to our internal format.
  */
-function convertContentItem(
-  content: unknown
-): { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string } {
-  // Handle content object with type field
-  const contentObj = content as { type?: string; text?: string; data?: string; mimeType?: string };
+function convertContentItem(content: unknown): SamplingContentBlock {
+  const contentObj = content as {
+    type?: string;
+    text?: string;
+    data?: string;
+    mimeType?: string;
+    id?: string;
+    name?: string;
+    input?: Record<string, unknown>;
+    toolUseId?: string;
+    content?: unknown[];
+    isError?: boolean;
+  };
 
+  // Text content
   if (contentObj.type === 'text' && typeof contentObj.text === 'string') {
     return { type: 'text' as const, text: contentObj.text };
   }
 
+  // Image content
   if (contentObj.type === 'image' && typeof contentObj.data === 'string' && typeof contentObj.mimeType === 'string') {
     return { type: 'image' as const, data: contentObj.data, mimeType: contentObj.mimeType };
   }
 
+  // Tool use content (in assistant messages)
+  if (contentObj.type === 'tool_use' && contentObj.id && contentObj.name) {
+    return {
+      type: 'tool_use' as const,
+      id: contentObj.id,
+      name: contentObj.name,
+      input: contentObj.input || {},
+    };
+  }
+
+  // Tool result content (in user messages)
+  if (contentObj.type === 'tool_result' && contentObj.toolUseId) {
+    const resultContent = Array.isArray(contentObj.content)
+      ? contentObj.content
+          .filter((c): c is { type: 'text'; text: string } =>
+            (c as { type?: string }).type === 'text'
+          )
+          .map((c) => ({ type: 'text' as const, text: c.text }))
+      : [];
+
+    return {
+      type: 'tool_result' as const,
+      toolUseId: contentObj.toolUseId,
+      content: resultContent,
+      isError: contentObj.isError,
+    };
+  }
+
   // Fallback for unsupported types
   return { type: 'text' as const, text: '[Unsupported content type]' };
+}
+
+/**
+ * Convert SDK message content (single or array) to our internal format.
+ */
+function convertMessageContent(
+  content: unknown
+): SamplingContentBlock | SamplingContentBlock[] {
+  if (Array.isArray(content)) {
+    return content.map(convertContentItem);
+  }
+  return convertContentItem(content);
+}
+
+/**
+ * Convert SDK tool definition to our internal format.
+ */
+function convertToolDefinition(sdkTool: unknown): ToolDefinition {
+  const tool = sdkTool as { name?: string; description?: string; inputSchema?: unknown };
+  return {
+    name: tool.name || 'unknown',
+    description: tool.description,
+    inputSchema: tool.inputSchema as Record<string, unknown> | undefined,
+  };
+}
+
+/**
+ * Convert SDK tool choice to our internal format.
+ */
+function convertToolChoice(sdkChoice: unknown): ToolChoice | undefined {
+  if (!sdkChoice) return undefined;
+
+  const choice = sdkChoice as { type?: string; name?: string };
+
+  if (choice.type === 'auto') return { type: 'auto' };
+  if (choice.type === 'none') return { type: 'none' };
+  if (choice.type === 'required') return { type: 'required' };
+  if (choice.type === 'tool' && choice.name) return { type: 'tool', name: choice.name };
+
+  return undefined;
 }
 
 /**
@@ -82,18 +172,19 @@ function convertContentItem(
 function convertToSamplingRequest(
   sdkRequest: CreateMessageRequest['params']
 ): SamplingRequest {
-  return {
-    messages: sdkRequest.messages.map((msg) => {
-      // Content can be a single item or an array
-      const contentItem = Array.isArray(msg.content)
-        ? msg.content[0]  // Take first item if array
-        : msg.content;
+  // Convert tools if present
+  const tools: ToolDefinition[] | undefined = sdkRequest.tools
+    ? sdkRequest.tools.map(convertToolDefinition)
+    : undefined;
 
-      return {
-        role: msg.role as 'user' | 'assistant',
-        content: convertContentItem(contentItem),
-      };
-    }),
+  // Convert tool choice if present
+  const toolChoice = convertToolChoice(sdkRequest.toolChoice);
+
+  return {
+    messages: sdkRequest.messages.map((msg): SamplingMessage => ({
+      role: msg.role as 'user' | 'assistant',
+      content: convertMessageContent(msg.content),
+    })),
     modelPreferences: sdkRequest.modelPreferences
       ? {
           hints: sdkRequest.modelPreferences.hints
@@ -112,6 +203,25 @@ function convertToSamplingRequest(
       | 'thisServer'
       | 'allServers'
       | undefined,
+    tools,
+    toolChoice,
+  };
+}
+
+/**
+ * Convert a tool call to SDK tool_use content block.
+ */
+function convertToolCallToContent(toolCall: ToolCall): {
+  type: 'tool_use';
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+} {
+  return {
+    type: 'tool_use',
+    id: toolCall.id,
+    name: toolCall.name,
+    input: toolCall.arguments,
   };
 }
 
@@ -119,7 +229,40 @@ function convertToSamplingRequest(
  * Convert our SamplingResponse to MCP SDK CreateMessageResult format.
  */
 function convertToSdkResult(response: SamplingResponse): CreateMessageResult {
-  // Handle both text and image content types
+  // If there are tool calls, include them in the content array
+  if (response.toolCalls && response.toolCalls.length > 0) {
+    // Build content array with text/image first, then tool_use blocks
+    const contentArray: Array<
+      | { type: 'text'; text: string }
+      | { type: 'image'; data: string; mimeType: string }
+      | { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> }
+    > = [];
+
+    // Add the main content (text or image)
+    if (response.content.type === 'text') {
+      contentArray.push({ type: 'text', text: response.content.text });
+    } else {
+      contentArray.push({
+        type: 'image',
+        data: response.content.data,
+        mimeType: response.content.mimeType,
+      });
+    }
+
+    // Add tool_use blocks
+    for (const toolCall of response.toolCalls) {
+      contentArray.push(convertToolCallToContent(toolCall));
+    }
+
+    return {
+      role: 'assistant',
+      content: contentArray as unknown as CreateMessageResult['content'],
+      model: response.model,
+      stopReason: response.stopReason,
+    };
+  }
+
+  // No tool calls - return single content item
   const content = response.content.type === 'text'
     ? { type: 'text' as const, text: response.content.text }
     : { type: 'image' as const, data: response.content.data, mimeType: response.content.mimeType };
@@ -133,12 +276,39 @@ function convertToSdkResult(response: SamplingResponse): CreateMessageResult {
 }
 
 /**
+ * Options for sampling handler configuration
+ */
+export interface SamplingHandlerOptions {
+  /**
+   * Approval mode for sampling requests:
+   * - 'ask': Show UI and wait for user response (default)
+   * - 'auto': Automatically respond using autoResponder or testing profile
+   * - 'deny': Automatically reject all requests
+   */
+  approvalMode?: ApprovalMode;
+
+  /**
+   * Testing profile for auto-respond mode.
+   * Used to generate responses when approvalMode is 'auto'.
+   */
+  testingProfile?: TestingProfile;
+
+  /**
+   * Custom auto-responder function.
+   * If provided and returns a response, that response is used.
+   * If returns null/undefined, falls back to testingProfile or UI.
+   */
+  autoResponder?: (request: SamplingRequest) => SamplingResponse | null | undefined;
+}
+
+/**
  * Callbacks for when sampling/elicitation requests are received.
  */
 export interface SamplingHandlerCallbacks {
   /**
    * Called when a sampling request is received from the server.
    * The implementation should show UI and eventually call resolveSamplingRequest.
+   * Not called when approvalMode is 'auto' or 'deny'.
    */
   onSamplingRequest: (
     requestId: string,
@@ -150,12 +320,53 @@ export interface SamplingHandlerCallbacks {
    * Called when a sampling request is cancelled by the server.
    */
   onSamplingCancelled?: (requestId: string) => void;
+
+  /**
+   * Called when a request is auto-approved (for logging/UI feedback).
+   */
+  onSamplingAutoApproved?: (
+    requestId: string,
+    request: SamplingRequest,
+    response: SamplingResponse
+  ) => void;
+
+  /**
+   * Called when a request is auto-denied (for logging/UI feedback).
+   */
+  onSamplingAutoDenied?: (requestId: string, request: SamplingRequest) => void;
+}
+
+/**
+ * Options for elicitation handler configuration
+ */
+export interface ElicitationHandlerOptions {
+  /**
+   * Approval mode for elicitation requests:
+   * - 'ask': Show UI and wait for user response (default)
+   * - 'auto': Automatically respond using defaults from testing profile
+   * - 'deny': Automatically decline all requests
+   */
+  approvalMode?: ApprovalMode;
+
+  /**
+   * Testing profile for auto-respond mode.
+   * Uses elicitationDefaults when approvalMode is 'auto'.
+   */
+  testingProfile?: TestingProfile;
+
+  /**
+   * Custom auto-responder function.
+   * If provided and returns data, that data is used as the response.
+   * If returns null/undefined, falls back to testingProfile or UI.
+   */
+  autoResponder?: (request: ElicitationRequest) => Record<string, unknown> | null | undefined;
 }
 
 export interface ElicitationHandlerCallbacks {
   /**
    * Called when an elicitation request is received from the server.
    * The implementation should show UI and eventually call resolveElicitationRequest.
+   * Not called when approvalMode is 'auto' or 'deny'.
    */
   onElicitationRequest: (
     requestId: string,
@@ -167,6 +378,37 @@ export interface ElicitationHandlerCallbacks {
    * Called when an elicitation request is cancelled by the server.
    */
   onElicitationCancelled?: (requestId: string) => void;
+
+  /**
+   * Called when a request is auto-approved (for logging/UI feedback).
+   */
+  onElicitationAutoApproved?: (
+    requestId: string,
+    request: ElicitationRequest,
+    response: Record<string, unknown>
+  ) => void;
+
+  /**
+   * Called when a request is auto-declined (for logging/UI feedback).
+   */
+  onElicitationAutoDeclined?: (requestId: string, request: ElicitationRequest) => void;
+}
+
+/**
+ * Generate an auto-response from a testing profile
+ */
+function generateProfileResponse(
+  profile: TestingProfile,
+  request: SamplingRequest
+): SamplingResponse {
+  const modelHints = request.modelPreferences?.hints;
+  const responseText = getResponseForModelHint(profile, modelHints);
+
+  return {
+    content: { type: 'text', text: responseText },
+    model: profile.defaultModel || 'mock-model',
+    stopReason: profile.defaultStopReason || 'endTurn',
+  };
 }
 
 /**
@@ -175,12 +417,16 @@ export interface ElicitationHandlerCallbacks {
  * @param client - The MCP client instance
  * @param callbacks - Callbacks for handling requests
  * @param parentRequestId - The ID of the parent tool execution request
+ * @param options - Optional configuration for approval mode
  */
 export function setupSamplingHandler(
   client: Client,
   callbacks: SamplingHandlerCallbacks,
-  parentRequestId: string
+  parentRequestId: string,
+  options?: SamplingHandlerOptions
 ): void {
+  const approvalMode = options?.approvalMode || 'ask';
+
   client.setRequestHandler(
     CreateMessageRequestSchema,
     async (request: CreateMessageRequest) => {
@@ -189,7 +435,38 @@ export function setupSamplingHandler(
 
       console.log('[MCP Handlers] Sampling request received:', requestId, samplingRequest);
 
-      // Create a promise that will be resolved by the UI
+      // Handle 'deny' mode - reject immediately
+      if (approvalMode === 'deny') {
+        console.log('[MCP Handlers] Auto-denying sampling request:', requestId);
+        callbacks.onSamplingAutoDenied?.(requestId, samplingRequest);
+        throw new Error('Sampling requests are disabled');
+      }
+
+      // Handle 'auto' mode - try auto-responders
+      if (approvalMode === 'auto') {
+        // Try custom auto-responder first
+        if (options?.autoResponder) {
+          const response = options.autoResponder(samplingRequest);
+          if (response) {
+            console.log('[MCP Handlers] Auto-responding via custom responder:', requestId);
+            callbacks.onSamplingAutoApproved?.(requestId, samplingRequest, response);
+            return convertToSdkResult(response);
+          }
+        }
+
+        // Try testing profile
+        if (options?.testingProfile?.autoRespond) {
+          const response = generateProfileResponse(options.testingProfile, samplingRequest);
+          console.log('[MCP Handlers] Auto-responding via testing profile:', requestId);
+          callbacks.onSamplingAutoApproved?.(requestId, samplingRequest, response);
+          return convertToSdkResult(response);
+        }
+
+        // Fall through to 'ask' mode if no auto-responder matched
+        console.log('[MCP Handlers] No auto-responder matched, falling back to ask mode');
+      }
+
+      // 'ask' mode - show UI and wait for user response
       const responsePromise = new Promise<SamplingResponse>((resolve, reject) => {
         samplingResolvers.set(requestId, { resolve, reject });
       });
@@ -294,12 +571,16 @@ function convertToElicitResult(
  * @param client - The MCP client instance
  * @param callbacks - Callbacks for handling requests
  * @param parentRequestId - The ID of the parent tool execution request
+ * @param options - Optional configuration for approval mode
  */
 export function setupElicitationHandler(
   client: Client,
   callbacks: ElicitationHandlerCallbacks,
-  parentRequestId: string
+  parentRequestId: string,
+  options?: ElicitationHandlerOptions
 ): void {
+  const approvalMode = options?.approvalMode || 'ask';
+
   client.setRequestHandler(
     ElicitRequestSchema,
     async (request: ElicitRequest) => {
@@ -308,7 +589,38 @@ export function setupElicitationHandler(
 
       console.log('[MCP Handlers] Elicitation request received:', requestId, elicitationRequest);
 
-      // Create a promise that will be resolved by the UI
+      // Handle 'deny' mode - decline immediately
+      if (approvalMode === 'deny') {
+        console.log('[MCP Handlers] Auto-declining elicitation request:', requestId);
+        callbacks.onElicitationAutoDeclined?.(requestId, elicitationRequest);
+        return convertToElicitResult({}, 'decline');
+      }
+
+      // Handle 'auto' mode - try auto-responders
+      if (approvalMode === 'auto') {
+        // Try custom auto-responder first
+        if (options?.autoResponder) {
+          const response = options.autoResponder(elicitationRequest);
+          if (response) {
+            console.log('[MCP Handlers] Auto-responding elicitation via custom responder:', requestId);
+            callbacks.onElicitationAutoApproved?.(requestId, elicitationRequest, response);
+            return convertToElicitResult(response);
+          }
+        }
+
+        // Try testing profile defaults
+        if (options?.testingProfile?.elicitationAutoRespond) {
+          const response = options.testingProfile.elicitationDefaults || {};
+          console.log('[MCP Handlers] Auto-responding elicitation via testing profile:', requestId);
+          callbacks.onElicitationAutoApproved?.(requestId, elicitationRequest, response);
+          return convertToElicitResult(response);
+        }
+
+        // Fall through to 'ask' mode if no auto-responder matched
+        console.log('[MCP Handlers] No elicitation auto-responder matched, falling back to ask mode');
+      }
+
+      // 'ask' mode - show UI and wait for user response
       const responsePromise = new Promise<Record<string, unknown>>((resolve, reject) => {
         elicitationResolvers.set(requestId, { resolve, reject });
       });
