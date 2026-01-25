@@ -25,6 +25,7 @@ import {
   connectClient,
   disconnectClient,
   isClientConnected,
+  serverSupports,
   // Transport
   createHttpTransport,
   // Handlers
@@ -35,6 +36,16 @@ import {
   setupRootsHandler,
   setupLoggingHandler,
   setupListChangedHandlers,
+  setupResourceUpdatedHandler,
+  subscribeToResource,
+  unsubscribeFromResource,
+  getPromptCompletions,
+  pingServer,
+  generateRequestId,
+  registerCancellableRequest,
+  completeRequest,
+  isRequestInProgress,
+  getInProgressRequestCount,
   // Memory repositories
   createMemoryServerConfigRepository,
   createMemoryHistoryRepository,
@@ -46,6 +57,7 @@ import {
   type SamplingResponse,
   type TestingProfile,
   type Root,
+  type ServerInfo,
 } from './src/index.js';
 
 // Parse CLI arguments
@@ -521,6 +533,117 @@ async function testPromptAccess(client: ReturnType<typeof createMcpClient>) {
   }
 }
 
+async function testPing(client: ReturnType<typeof createMcpClient>) {
+  logSection('Testing Ping');
+
+  try {
+    const result = await pingServer(client);
+    logSuccess(`Ping successful: ${result}`);
+  } catch (error) {
+    logError(`Ping failed: ${error instanceof Error ? error.message : error}`);
+  }
+}
+
+async function testResourceSubscription(
+  client: ReturnType<typeof createMcpClient>,
+  serverInfo: ServerInfo
+) {
+  logSection('Testing Resource Subscriptions');
+
+  // Check if server supports subscriptions
+  if (!serverInfo.capabilities?.resources?.subscribe) {
+    logInfo('Server does not support resource subscriptions');
+    return;
+  }
+
+  try {
+    // Get resources
+    const resourcesResult = await client.listResources();
+    const resources = resourcesResult.resources || [];
+
+    if (resources.length === 0) {
+      logInfo('No resources available to subscribe to');
+      return;
+    }
+
+    const uri = resources[0].uri;
+    logInfo(`Subscribing to: ${uri}`);
+
+    // Set up update handler
+    let updateReceived = false;
+    setupResourceUpdatedHandler(client, {
+      onResourceUpdated: (updatedUri) => {
+        updateReceived = true;
+        logInfo(`Resource updated: ${updatedUri}`);
+      },
+    });
+
+    // Subscribe
+    await subscribeToResource(client, uri);
+    logSuccess('Subscribed successfully');
+
+    // Unsubscribe
+    await unsubscribeFromResource(client, uri);
+    logSuccess('Unsubscribed successfully');
+  } catch (error) {
+    logError(`Subscription test failed: ${error instanceof Error ? error.message : error}`);
+  }
+}
+
+async function testCompletions(client: ReturnType<typeof createMcpClient>) {
+  logSection('Testing Completions');
+
+  try {
+    // Get prompts
+    const promptsResult = await client.listPrompts();
+    const prompts = promptsResult.prompts || [];
+
+    if (prompts.length === 0) {
+      logInfo('No prompts available to test completions');
+      return;
+    }
+
+    // Find a prompt with arguments
+    const promptWithArgs = prompts.find((p) => p.arguments && p.arguments.length > 0);
+    if (!promptWithArgs) {
+      logInfo('No prompts with arguments found');
+      return;
+    }
+
+    const promptName = promptWithArgs.name;
+    const argName = promptWithArgs.arguments![0].name;
+    logInfo(`Getting completions for prompt: ${promptName}, arg: ${argName}`);
+
+    const completions = await getPromptCompletions(client, promptName, argName, '');
+    logSuccess(`Got ${completions.values.length} completion(s)`);
+    if (completions.values.length > 0) {
+      logInfo(`Values: ${completions.values.slice(0, 5).join(', ')}${completions.values.length > 5 ? '...' : ''}`);
+    }
+  } catch (error) {
+    // Completions may not be supported
+    logInfo(`Completions: ${error instanceof Error ? error.message : 'not supported'}`);
+  }
+}
+
+async function testCancellation() {
+  logSection('Testing Cancellation Tracking');
+
+  // Test request tracking
+  const reqId = generateRequestId();
+  logInfo(`Generated request ID: ${reqId}`);
+  logSuccess(`ID format valid: ${reqId.startsWith('req-')}`);
+
+  // Register and check
+  const controller = registerCancellableRequest(reqId);
+  logSuccess(`Registered request, in progress: ${isRequestInProgress(reqId)}`);
+  logSuccess(`In-progress count: ${getInProgressRequestCount()}`);
+
+  // Complete and check
+  completeRequest(reqId);
+  logSuccess(`Completed request, still in progress: ${isRequestInProgress(reqId)}`);
+  logSuccess(`In-progress count after complete: ${getInProgressRequestCount()}`);
+}
+
 async function main() {
   console.log();
   log('Inspector Core CLI Test', colors.cyan);
@@ -539,6 +662,7 @@ async function main() {
   // Unit tests (no server needed)
   await testMemoryRepositories();
   await testSamplingWithToolsTypes();
+  await testCancellation();
 
   if (options.unitOnly) {
     console.log();
@@ -557,6 +681,9 @@ async function main() {
     await testToolExecution(client);
     await testResourceAccess(client);
     await testPromptAccess(client);
+    await testPing(client);
+    await testResourceSubscription(client, serverInfo);
+    await testCompletions(client);
     await testSamplingWithToolsLive(client);
 
     logSection('Cleanup');

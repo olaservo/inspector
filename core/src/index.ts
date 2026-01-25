@@ -44,12 +44,32 @@ export type {
   ElicitationHandlerCallbacks,
 } from './handlers.js';
 
-// Capability handlers (roots, logging, list changed)
+// Capability handlers (roots, logging, list changed, subscriptions, completions, ping, cancellation)
 export {
+  // Roots
   setupRootsHandler,
+  // Logging
   setupLoggingHandler,
   setServerLogLevel,
+  // List changed
   setupListChangedHandlers,
+  // Resource subscriptions
+  setupResourceUpdatedHandler,
+  subscribeToResource,
+  unsubscribeFromResource,
+  // Completions
+  getPromptCompletions,
+  getResourceCompletions,
+  // Ping
+  pingServer,
+  // Cancellation
+  generateRequestId,
+  registerCancellableRequest,
+  completeRequest,
+  cancelRequest,
+  cancelAllRequests,
+  isRequestInProgress,
+  getInProgressRequestCount,
 } from './capabilities.js';
 export type {
   Root,
@@ -57,6 +77,11 @@ export type {
   RootsHandlerCallbacks,
   LoggingHandlerCallbacks,
   ListChangedHandlerCallbacks,
+  ResourceSubscriptionCallbacks,
+  CompletionRef,
+  PromptCompletionRef,
+  ResourceCompletionRef,
+  CompletionResult,
 } from './capabilities.js';
 
 // All types
