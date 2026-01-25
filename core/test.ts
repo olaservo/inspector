@@ -1,15 +1,20 @@
 #!/usr/bin/env npx tsx
 /**
- * CLI test script for inspector-core package
- *
- * Tests:
- * - Memory repository implementations
- * - MCP client connection
- * - Capability handlers (roots, logging)
- * - Sampling/elicitation with auto-respond
+ * CLI test runner for inspector-core package
  *
  * Usage:
- *   npx tsx test-core.ts [server-url]
+ *   npx tsx test.ts [options] [server-url]
+ *
+ * Options:
+ *   --profile <id>   Testing profile: manual, auto-approve (default: auto-approve)
+ *   --unit           Run unit tests only (no server required)
+ *   --help           Show this help
+ *
+ * Examples:
+ *   npx tsx test.ts                                    # All tests with auto-approve
+ *   npx tsx test.ts --unit                             # Unit tests only
+ *   npx tsx test.ts --profile manual                   # Manual approval mode
+ *   npx tsx test.ts http://localhost:3000/mcp          # Custom server URL
  *
  * Default server: http://localhost:6299/mcp (everything server)
  */
@@ -39,14 +44,55 @@ import {
   // Types
   type SamplingRequest,
   type SamplingResponse,
-  type SamplingMessage,
-  type SamplingContentBlock,
-  type ToolUseContent,
-  type ToolResultContent,
+  type TestingProfile,
   type Root,
-} from './core/src/index.js';
+} from './src/index.js';
 
-const SERVER_URL = process.argv[2] || 'http://localhost:6299/mcp';
+// Parse CLI arguments
+function parseArgs() {
+  const args = process.argv.slice(2);
+  const options = {
+    profileId: 'auto-approve',
+    unitOnly: false,
+    serverUrl: 'http://localhost:6299/mcp',
+    help: false,
+  };
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--help' || arg === '-h') {
+      options.help = true;
+    } else if (arg === '--unit') {
+      options.unitOnly = true;
+    } else if (arg === '--profile' && args[i + 1]) {
+      options.profileId = args[++i];
+    } else if (!arg.startsWith('--')) {
+      options.serverUrl = arg;
+    }
+  }
+
+  return options;
+}
+
+const options = parseArgs();
+
+if (options.help) {
+  console.log(`
+Usage: npx tsx test.ts [options] [server-url]
+
+Options:
+  --profile <id>   Testing profile: manual, auto-approve (default: auto-approve)
+  --unit           Run unit tests only (no server required)
+  --help           Show this help
+
+Examples:
+  npx tsx test.ts                                    # All tests with auto-approve
+  npx tsx test.ts --unit                             # Unit tests only
+  npx tsx test.ts --profile manual                   # Manual approval mode
+  npx tsx test.ts http://localhost:3000/mcp          # Custom server URL
+`);
+  process.exit(0);
+}
 
 // ANSI colors for output
 const colors = {
@@ -136,7 +182,7 @@ async function testMemoryRepositories() {
 async function testMcpConnection() {
   logSection('Testing MCP Client Connection');
 
-  logInfo(`Connecting to: ${SERVER_URL}`);
+  logInfo(`Connecting to: ${options.serverUrl}`);
 
   // Build capabilities object explicitly for debugging
   const capabilities = {
@@ -150,7 +196,7 @@ async function testMcpConnection() {
     version: '1.0.0',
   });
 
-  const transport = createHttpTransport(SERVER_URL);
+  const transport = createHttpTransport(options.serverUrl);
 
   try {
     const serverInfo = await connectClient(client, transport);
@@ -203,25 +249,18 @@ async function testCapabilities(client: ReturnType<typeof createMcpClient>) {
   logSuccess('List changed handlers set up');
 }
 
-async function testSamplingAutoRespond(client: ReturnType<typeof createMcpClient>) {
-  logSection('Testing Sampling Handler (Auto-Respond)');
+async function testSamplingWithProfile(client: ReturnType<typeof createMcpClient>, profile: TestingProfile) {
+  logSection(`Testing Sampling Handler (Profile: ${profile.name})`);
 
-  const profiles = getDefaultTestingProfiles();
-  const autoProfile = profiles.find((p) => p.id === 'auto-approve');
-
-  if (!autoProfile) {
-    logError('Auto-approve profile not found');
-    return;
-  }
-
-  let autoApprovedCount = 0;
+  const isAutoMode = profile.id === 'auto-approve';
+  let requestCount = 0;
 
   setupSamplingHandler(
     client,
     {
       onSamplingRequest: (reqId, req, parentId) => {
+        requestCount++;
         logInfo(`Sampling request received: ${reqId}`);
-        // Log tools if present
         if (req.tools && req.tools.length > 0) {
           logInfo(`  Tools available: ${req.tools.map(t => t.name).join(', ')}`);
         }
@@ -230,7 +269,6 @@ async function testSamplingAutoRespond(client: ReturnType<typeof createMcpClient
         }
       },
       onSamplingAutoApproved: (reqId, req, resp) => {
-        autoApprovedCount++;
         logSuccess(`Auto-approved sampling request: ${reqId}`);
         logInfo(`Response: "${resp.content.type === 'text' ? resp.content.text : '[image]'}"`);
         if (resp.toolCalls && resp.toolCalls.length > 0) {
@@ -240,21 +278,18 @@ async function testSamplingAutoRespond(client: ReturnType<typeof createMcpClient
     },
     'test-parent-id',
     {
-      approvalMode: 'auto',
-      testingProfile: autoProfile,
+      approvalMode: isAutoMode ? 'auto' : 'manual',
+      testingProfile: profile,
     }
   );
-  logSuccess('Sampling handler set up with auto-respond mode');
-  logInfo('(Sampling will auto-respond if server sends createMessage request)');
+  logSuccess(`Sampling handler set up with profile: ${profile.name}`);
+  logInfo(`Approval mode: ${isAutoMode ? 'auto' : 'manual'}`);
 }
 
 async function testSamplingWithToolsTypes() {
   logSection('Testing Sampling With Tools Types');
 
-  // Import types to verify they exist
-  const {
-    createMemoryHistoryRepository,
-  } = await import('./core/src/index.js');
+  // Type verification (imports already at top)
 
   // Create a mock sampling request with tools
   const mockRequest: SamplingRequest = {
@@ -491,33 +526,39 @@ async function main() {
   log('Inspector Core CLI Test', colors.cyan);
   log('========================', colors.cyan);
 
-  // Test memory repositories (no server needed)
-  await testMemoryRepositories();
+  // Get testing profile
+  const profiles = getDefaultTestingProfiles();
+  const profile = profiles.find((p) => p.id === options.profileId);
+  if (!profile) {
+    logError(`Unknown profile: ${options.profileId}`);
+    logInfo(`Available profiles: ${profiles.map(p => p.id).join(', ')}`);
+    process.exit(1);
+  }
+  logInfo(`Using profile: ${profile.name}`);
 
-  // Test sampling with tools types (no server needed)
+  // Unit tests (no server needed)
+  await testMemoryRepositories();
   await testSamplingWithToolsTypes();
 
-  // Test MCP connection
+  if (options.unitOnly) {
+    console.log();
+    log('Unit tests complete!', colors.green);
+    return;
+  }
+
+  // Integration tests (server required)
   const connection = await testMcpConnection();
 
   if (connection) {
     const { client, serverInfo } = connection;
 
-    // Test capabilities
     await testCapabilities(client);
-
-    // Test sampling auto-respond
-    await testSamplingAutoRespond(client);
-
-    // Test MCP operations
+    await testSamplingWithProfile(client, profile);
     await testToolExecution(client);
     await testResourceAccess(client);
     await testPromptAccess(client);
-
-    // Test sampling with tools (requires mcp-sampling-with-tools server)
     await testSamplingWithToolsLive(client);
 
-    // Disconnect
     logSection('Cleanup');
     await disconnectClient(client);
     logSuccess('Disconnected from server');
