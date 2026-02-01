@@ -63,21 +63,42 @@ function PriorityBar({ value, label }: { value: number; label: string }) {
 }
 
 function MessageDisplay({ message }: { message: SamplingMessage }) {
+  const content = Array.isArray(message.content) ? message.content : [message.content];
+
   return (
     <Stack gap="xs" pb="sm" style={{ borderBottom: '1px solid var(--mantine-color-dark-4)' }}>
       <Badge variant="outline" size="sm">
         {message.role}
       </Badge>
-      {message.content.type === 'text' ? (
-        <Text size="sm">{message.content.text}</Text>
-      ) : (
-        <Group gap="xs">
-          <IconPhoto size={16} />
-          <Text size="sm" c="dimmed">
-            [Image: {message.content.mimeType} - Click to preview]
-          </Text>
-        </Group>
-      )}
+      {content.map((block, idx) => {
+        if (block.type === 'text') {
+          return <Text key={idx} size="sm">{block.text}</Text>;
+        } else if (block.type === 'image') {
+          return (
+            <Group key={idx} gap="xs">
+              <IconPhoto size={16} />
+              <Text size="sm" c="dimmed">
+                [Image: {block.mimeType} - Click to preview]
+              </Text>
+            </Group>
+          );
+        } else if (block.type === 'tool_use') {
+          return (
+            <Group key={idx} gap="xs">
+              <Badge size="xs" color="blue">tool_use</Badge>
+              <Text size="sm" c="dimmed">{block.name}</Text>
+            </Group>
+          );
+        } else if (block.type === 'tool_result') {
+          return (
+            <Group key={idx} gap="xs">
+              <Badge size="xs" color="green">tool_result</Badge>
+              <Text size="sm" c="dimmed">for {block.toolUseId}</Text>
+            </Group>
+          );
+        }
+        return null;
+      })}
     </Stack>
   );
 }

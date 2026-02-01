@@ -16,98 +16,121 @@
 
 ## Client Feature Handlers
 
-These are modals/panels that appear when the server invokes client capabilities.
+Client feature requests (sampling, elicitation) appear **inline** during tool execution, replacing the Results panel. This keeps the user focused on the tool workflow without context-switching to separate modals.
 
 ### Sampling Panel
 
-When server sends `sampling/createMessage` request:
+When a tool triggers a `sampling/createMessage` request, it appears inline:
 
 ```
 +-------------------------------------------------------------------------+
-| Sampling Request                                                    [x] |
+| Tool: trigger-agentic-sampling                           [Executing...] |
 +-------------------------------------------------------------------------+
+| Parameters: { "prompt": "What is 2+2?", "availableTools": ["add"] }     |
++-------------------------------------------------------------------------+
+| Progress: 50% complete                                           12.5s  |
++=========================================================================+
+| [!] Pending Client Requests (1)                                         |
+|     Tool execution is waiting for your response to continue.            |
++-------------------------------------------------------------------------+
+| sampling/createMessage                                        [1 of 1]  |
 |                                                                         |
-| The server is requesting an LLM completion.                             |
-|                                                                         |
-| Messages:                                                               |
 | +---------------------------------------------------------------------+ |
-| | [0] role: user                                                      | |
-| |     "Analyze this data and provide insights about the trends..."    | |
-| |                                                                     | |
-| | [1] role: user                                                      | |
-| |     [Image: data_chart.png - Click to preview]                      | |
-| +---------------------------------------------------------------------+ |
-|                                                                         |
-| Model Preferences:                                                      |
-| +---------------------------------------------------------------------+ |
-| | Hints: ["claude-3-sonnet", "gpt-4"]                                 | |
-| | Cost Priority: low (0.2)                                            | |
-| | Speed Priority: medium (0.5)                                        | |
-| | Intelligence Priority: high (0.8)                                   | |
+| | [user] What is 2+2?                                                 | |
 | +---------------------------------------------------------------------+ |
 |                                                                         |
-| Parameters:                                                             |
-|   Max Tokens: 1000                                                      |
-|   Stop Sequences: ["\n\n", "END"]                                       |
-|   Temperature: (not specified)                                          |
+| Model hints: claude-3-sonnet, gpt-4                                     |
+| Max Tokens: 1000    Temperature: 0.7                                    |
 |                                                                         |
-| Include Context: [x] thisServer                                         |
+| +--- Tools (1) -------------------------------------------------------+ |
+| | [add]  Adds two numbers together                                    | |
+| | Tool Choice: [auto v]                                               | |
+| +---------------------------------------------------------------------+ |
+|                                                                         |
+| [x] Include Context: thisServer                                         |
 |                                                                         |
 | ----------------------------------------------------------------------- |
 |                                                                         |
-| Response (enter mock response or connect to LLM):                       |
+| Testing Profile: [Manual v]                                             |
+|                                                                         |
+| Response:                                                         [Copy]|
 | +---------------------------------------------------------------------+ |
-| | Based on the data chart, I can see several key trends:              | |
-| |                                                                     | |
-| | 1. Revenue has increased 25% quarter-over-quarter                   | |
-| | 2. User engagement peaks on Tuesdays...                             | |
-| |                                                                     | |
+| | The answer is 4.                                                    | |
 | +---------------------------------------------------------------------+ |
 |                                                                         |
-| Model Used: ________________    Stop Reason: [end_turn v]               |
+| Model: [mock-model-1.0]              Stop Reason: [endTurn v]           |
 |                                                                         |
-|                                      [Reject Request]  [Send Response]  |
+|                          [Reject]  [Edit & Send]  [Auto-respond]        |
++-------------------------------------------------------------------------+
+|                      [Cancel Tool Execution]                            |
 +-------------------------------------------------------------------------+
 ```
 
 **Features:**
-- Display full sampling request details:
-  - Messages with text, image, and audio content
-  - Model hints and preferences
-  - Max tokens, stop sequences, temperature
-  - Context inclusion settings
-- **Editable response field** for mock LLM testing
-- Model and stop reason fields for response
-- **Approve/Reject** with human-in-the-loop
-- Image/audio preview in messages
-- Option to integrate with real LLM (deferred to plugins)
+- **Inline display** - Appears in Results panel during tool execution
+- **Full request details** visible without modal:
+  - Messages with role badges (text, image, tool_use, tool_result)
+  - Model hints badges
+  - Parameters (Max Tokens, Temperature, Stop Sequences)
+  - **Tools list** with names and descriptions (MCP 2025-11-25)
+  - **Tool Choice** dropdown (auto/none/required/specific)
+  - Include Context checkbox
+- **Testing Profile** selector for response behavior
+- **Response field** with copy button
+- **Model** and **Stop Reason** fields
+- **Tool Calls builder** (when stopReason is "toolUse")
+- Action buttons:
+  - **[Reject]** - Decline the sampling request
+  - **[Edit & Send]** - Send the response as-is or after editing
+  - **[Auto-respond]** - Use Testing Profile to auto-generate response
+- **[Cancel Tool Execution]** - Abort the entire tool call
+
+#### Sampling with Tool Calling (MCP 2025-11-25)
+
+When `tools` and `toolChoice` are provided, the LLM can request tool execution:
+
+**Response with toolUse:**
+When stopReason is set to "toolUse", a Tool Calls section appears:
+
+```
+| Stop Reason: [toolUse v]                                                |
+|                                                                         |
+| +--- Tool Calls ------------------------------------------------------+ |
+| | [add v] {"a": 2, "b": 2}                                     [x]    | |
+| |                                                        [+ Add]      | |
+| +---------------------------------------------------------------------+ |
+```
+
+The server receives the tool calls, executes them, and sends a follow-up sampling request with results.
 
 ### Elicitation Handler
 
-When server sends `elicitation/create` request:
+When a tool triggers an `elicitation/create` request, it appears inline:
 
 **Form Mode:**
 
 ```
 +-------------------------------------------------------------------------+
-| Server Request: User Input Required                                 [x] |
+| [!] Pending Client Requests (1)                                         |
 +-------------------------------------------------------------------------+
+| elicitation/create (form)                                     [1 of 1]  |
 |                                                                         |
 | "Please provide your database connection details to proceed."           |
 |                                                                         |
-| ----------------------------------------------------------------------- |
-|                                                                         |
 | Host *                                                                  |
+|   The database server hostname or IP address                            |
 | +---------------------------------------------------------------------+ |
 | | localhost                                                           | |
 | +---------------------------------------------------------------------+ |
 |                                                                         |
 | Port *                                                                  |
+|   The database server port (default: 5432)                              |
 | +---------------------------------------------------------------------+ |
 | | 5432                                                                | |
 | +---------------------------------------------------------------------+ |
 |                                                                         |
 | Database                                                                |
+|   Name of the database to connect to                                    |
 | +---------------------------------------------------------------------+ |
 | | myapp_production                                                    | |
 | +---------------------------------------------------------------------+ |
@@ -117,8 +140,7 @@ When server sends `elicitation/create` request:
 | | require                                                           v | |
 | +---------------------------------------------------------------------+ |
 |                                                                         |
-| WARNING: Only provide information you trust this server with.           |
-|    The server "{server_name}" is requesting this data.                  |
+| [!] WARNING: Server "data-processor" is requesting this data.           |
 |                                                                         |
 |                                              [Cancel]  [Submit]         |
 +-------------------------------------------------------------------------+
@@ -128,48 +150,41 @@ When server sends `elicitation/create` request:
 
 ```
 +-------------------------------------------------------------------------+
-| Server Request: External Action Required                            [x] |
+| [!] Pending Client Requests (1)                                         |
 +-------------------------------------------------------------------------+
+| elicitation/create (URL)                                      [1 of 1]  |
 |                                                                         |
 | "Please complete the OAuth authorization in your browser."              |
-|                                                                         |
-| ----------------------------------------------------------------------- |
-|                                                                         |
-| The server is requesting you visit:                                     |
 |                                                                         |
 | +---------------------------------------------------------------------+ |
 | | https://auth.example.com/oauth/authorize?client_id=abc&state=xyz    | |
 | +---------------------------------------------------------------------+ |
-|                                                            [Copy URL]   |
 |                                                                         |
-|                           [Open in Browser]                             |
+|                                               [Copy]  [Open]            |
 |                                                                         |
-| ----------------------------------------------------------------------- |
-|                                                                         |
-| Status: Waiting for completion...                        (spinning)     |
+| Status: (spinner) Waiting for completion...                             |
 |                                                                         |
 | Elicitation ID: abc123-def456                                           |
 |                                                                         |
-| WARNING: This will open an external URL. Verify the domain before       |
-| proceeding.                                                             |
+| [!] WARNING: Opening external URL (auth.example.com). Verify the domain.|
 |                                                                         |
-|                                              [Cancel]                   |
+|                                                            [Cancel]     |
 +-------------------------------------------------------------------------+
 ```
 
 **Features:**
+- **Inline display** - Appears in Results panel during tool execution
 - **Form Mode:**
   - Generate form from JSON Schema in request
-  - Validate input before submission
-  - Required field indicators
+  - **Field descriptions** shown above each field
+  - Required field indicators (*)
   - Security warning with server name
   - Submit returns response to server
 - **URL Mode:**
   - Display URL for user to visit
-  - Copy URL button
-  - Open in browser button
-  - Waiting indicator until `notifications/elicitation/complete` received
-  - Elicitation ID display
+  - Copy URL and Open in browser buttons
+  - Waiting indicator until completion
+  - **Elicitation ID** display
   - Domain verification warning
 - **Cancel** sends declined response
 

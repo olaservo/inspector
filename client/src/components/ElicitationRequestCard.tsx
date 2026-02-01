@@ -117,122 +117,64 @@ function ElicitationFormCard({
           {request.message}
         </Text>
 
-        {/* Form Fields - Compact Grid */}
-        <Group grow gap="xs" align="flex-start">
-          {Object.entries(request.schema.properties)
-            .slice(0, 3)
-            .map(([key, field]) => (
-              <div key={key}>
-                {field.enum ? (
-                  <Select
-                    label={
-                      <Text size="xs">
-                        {field.name}
-                        {isRequired(key) && (
-                          <Text span c="red">
-                            {' '}
-                            *
-                          </Text>
-                        )}
-                      </Text>
-                    }
-                    size="xs"
-                    value={String(formData[key] ?? '')}
-                    onChange={(val) => handleChange(key, val || '')}
-                    data={field.enum.map((opt) => ({ value: opt, label: opt }))}
-                    placeholder={`Select`}
-                  />
-                ) : (
-                  <TextInput
-                    label={
-                      <Text size="xs">
-                        {field.name}
-                        {isRequired(key) && (
-                          <Text span c="red">
-                            {' '}
-                            *
-                          </Text>
-                        )}
-                      </Text>
-                    }
-                    size="xs"
-                    type={field.type === 'number' ? 'number' : 'text'}
-                    value={formData[key] ?? ''}
-                    onChange={(e) =>
-                      handleChange(
-                        key,
-                        field.type === 'number'
-                          ? Number(e.target.value)
-                          : e.target.value
-                      )
-                    }
-                    placeholder={field.description || `Enter ${field.name}`}
-                  />
-                )}
-              </div>
-            ))}
-        </Group>
-
-        {/* Show remaining fields if more than 3 */}
-        {Object.keys(request.schema.properties).length > 3 && (
-          <Group grow gap="xs" align="flex-start">
-            {Object.entries(request.schema.properties)
-              .slice(3)
-              .map(([key, field]) => (
-                <div key={key}>
-                  {field.enum ? (
-                    <Select
-                      label={
-                        <Text size="xs">
-                          {field.name}
-                          {isRequired(key) && (
-                            <Text span c="red">
-                              {' '}
-                              *
-                            </Text>
-                          )}
+        {/* Form Fields */}
+        <Stack gap="xs">
+          {Object.entries(request.schema.properties).map(([key, field]) => (
+            <div key={key}>
+              {field.description && (
+                <Text size="xs" c="dimmed" mb={2}>
+                  {field.description}
+                </Text>
+              )}
+              {field.enum ? (
+                <Select
+                  label={
+                    <Text size="xs">
+                      {field.name}
+                      {isRequired(key) && (
+                        <Text span c="red">
+                          {' '}
+                          *
                         </Text>
-                      }
-                      size="xs"
-                      value={String(formData[key] ?? '')}
-                      onChange={(val) => handleChange(key, val || '')}
-                      data={field.enum.map((opt) => ({
-                        value: opt,
-                        label: opt,
-                      }))}
-                      placeholder={`Select`}
-                    />
-                  ) : (
-                    <TextInput
-                      label={
-                        <Text size="xs">
-                          {field.name}
-                          {isRequired(key) && (
-                            <Text span c="red">
-                              {' '}
-                              *
-                            </Text>
-                          )}
+                      )}
+                    </Text>
+                  }
+                  size="xs"
+                  value={String(formData[key] ?? '')}
+                  onChange={(val) => handleChange(key, val || '')}
+                  data={field.enum.map((opt) => ({ value: opt, label: opt }))}
+                  placeholder={`Select ${field.name}`}
+                />
+              ) : (
+                <TextInput
+                  label={
+                    <Text size="xs">
+                      {field.name}
+                      {isRequired(key) && (
+                        <Text span c="red">
+                          {' '}
+                          *
                         </Text>
-                      }
-                      size="xs"
-                      type={field.type === 'number' ? 'number' : 'text'}
-                      value={formData[key] ?? ''}
-                      onChange={(e) =>
-                        handleChange(
-                          key,
-                          field.type === 'number'
-                            ? Number(e.target.value)
-                            : e.target.value
-                        )
-                      }
-                      placeholder={field.description || `Enter ${field.name}`}
-                    />
-                  )}
-                </div>
-              ))}
-          </Group>
-        )}
+                      )}
+                    </Text>
+                  }
+                  size="xs"
+                  type={field.type === 'number' ? 'number' : 'text'}
+                  value={formData[key] ?? ''}
+                  onChange={(e) =>
+                    handleChange(
+                      key,
+                      field.type === 'number'
+                        ? Number(e.target.value)
+                        : e.target.value
+                    )
+                  }
+                  placeholder={`Enter ${field.name}`}
+                />
+              )}
+            </div>
+          ))}
+        </Stack>
 
         {/* Security Warning */}
         <Alert
@@ -363,6 +305,11 @@ function ElicitationUrlCard({
           <Loader size="xs" />
           <Text size="xs">Waiting for completion...</Text>
         </Group>
+
+        {/* Elicitation ID */}
+        <Text size="xs" c="dimmed">
+          Elicitation ID: {request.elicitationId}
+        </Text>
 
         {/* Domain Warning */}
         <Alert

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Stack, Group, Text, Button, Alert, ScrollArea } from '@mantine/core';
 import { IconAlertCircle, IconX } from '@tabler/icons-react';
 import type { PendingClientRequest } from '@/context/ExecutionContext';
@@ -9,7 +8,6 @@ import type {
 } from '@modelcontextprotocol/inspector-core';
 import { SamplingRequestCard, type SamplingResponse } from './SamplingRequestCard';
 import { ElicitationRequestCard } from './ElicitationRequestCard';
-import { SamplingModal } from './SamplingModal';
 
 interface PendingClientRequestsPanelProps {
   requests: PendingClientRequest[];
@@ -32,8 +30,6 @@ export function PendingClientRequestsPanel({
   onReject,
   onCancelTool,
 }: PendingClientRequestsPanelProps) {
-  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
-
   // Get pending requests only (not completed/rejected)
   const pendingRequests = requests.filter((r) => r.status === 'pending');
   const currentRequest = pendingRequests[0];
@@ -78,7 +74,6 @@ export function PendingClientRequestsPanel({
               onResolveSampling(currentRequest.id, response)
             }
             onReject={() => onReject(currentRequest.id)}
-            onViewDetails={() => setDetailsModalOpen(true)}
           />
         ) : (
           <ElicitationRequestCard
@@ -105,12 +100,6 @@ export function PendingClientRequestsPanel({
           Cancel Tool Execution
         </Button>
       </Group>
-
-      {/* Details Modal for Sampling */}
-      <SamplingModal
-        open={detailsModalOpen}
-        onOpenChange={setDetailsModalOpen}
-      />
     </Stack>
   );
 }
