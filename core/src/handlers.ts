@@ -152,12 +152,20 @@ function convertToolDefinition(sdkTool: unknown): ToolDefinition {
 
 /**
  * Convert SDK tool choice to our internal format.
+ * MCP spec uses { mode: "auto" | "none" | "required" } or { mode: "tool", name: "toolName" }
  */
 function convertToolChoice(sdkChoice: unknown): ToolChoice | undefined {
   if (!sdkChoice) return undefined;
 
-  const choice = sdkChoice as { type?: string; name?: string };
+  const choice = sdkChoice as { mode?: string; type?: string; name?: string };
 
+  // Check 'mode' field (MCP spec format)
+  if (choice.mode === 'auto') return { type: 'auto' };
+  if (choice.mode === 'none') return { type: 'none' };
+  if (choice.mode === 'required') return { type: 'required' };
+  if (choice.mode === 'tool' && choice.name) return { type: 'tool', name: choice.name };
+
+  // Also check 'type' field for backwards compatibility
   if (choice.type === 'auto') return { type: 'auto' };
   if (choice.type === 'none') return { type: 'none' };
   if (choice.type === 'required') return { type: 'required' };
