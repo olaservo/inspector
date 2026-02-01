@@ -2,7 +2,7 @@
 
 **Status:** Draft
 **Issue:** [#983](https://github.com/modelcontextprotocol/inspector/issues/983)
-**Last Updated:** 2026-01-19
+**Last Updated:** 2026-02-01
 
 ## Overview
 
@@ -169,7 +169,7 @@ See [v2_tech_stack.md](./v2_tech_stack.md#pino-rationale) for Pino configuration
 | **Execution State** | useReducer + Context | Complex transitions with pending requests; already implemented in ExecutionContext |
 | **User Preferences** | Zustand + persist | Simple key-value; needs persistence; avoids prop drilling |
 | **Logs Display** | Zustand | Real-time buffer; filter state; pause/resume |
-| **Execution Forms** | Zustand | Form values; selected items; response history |
+| **Execution Forms** | Zustand | Form values; selected items; last result display |
 | **Testing Profiles** | Zustand + persist | User configurations; active selection |
 | **Server Configs** | Repository (proxy API) | Per spec constraint; not browser storage |
 | **History Data** | Repository interface | Storage implementation deferred |
@@ -286,7 +286,7 @@ interface ExecutionFormState {
   // Tools
   selectedToolName: string | null;
   toolFormValues: Record<string, unknown>;
-  toolResponseHistory: ToolResponse[];
+  lastToolResult: ToolResult | null;
 
   // Resources
   selectedResourceUri: string | null;
@@ -298,8 +298,7 @@ interface ExecutionFormState {
   promptMessages: unknown[] | null;
 }
 
-interface ToolResponse {
-  id: string;
+interface ToolResult {
   toolName: string;
   args: Record<string, unknown>;
   result: unknown;
@@ -311,8 +310,7 @@ interface ToolResponse {
 interface ExecutionFormActions {
   selectTool: (name: string | null) => void;
   setToolFormValues: (values: Record<string, unknown>) => void;
-  addToolResponse: (response: ToolResponse) => void;
-  clearToolHistory: () => void;
+  setLastToolResult: (result: ToolResult | null) => void;
 
   selectResource: (uri: string | null) => void;
   setResourceContent: (content: unknown | null) => void;
@@ -325,7 +323,7 @@ interface ExecutionFormActions {
 }
 ```
 
-**History cap:** 50 tool responses
+**Note:** Full execution history is persisted server-side via Pino/NDJSON and accessed through the History API. The `lastToolResult` field provides immediate display of the most recent result without duplicating the history store.
 
 ### 4. Testing Profiles Store
 
