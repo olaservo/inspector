@@ -839,8 +839,22 @@ server.on("listening", () => {
 server.on("error", (err) => {
   if (err.message.includes(`EADDRINUSE`)) {
     console.error(`❌  Proxy Server PORT IS IN USE at port ${PORT} ❌ `);
+    const fixCommand =
+      process.platform === "win32"
+        ? `netstat -ano | findstr :${PORT}`
+        : `lsof -ti:${PORT} | xargs kill -9`;
+    console.error(`💡 To fix: run "${fixCommand}" to free the port.`);
   } else {
     console.error(err.message);
   }
   process.exit(1);
 });
+
+// Graceful shutdown: close the HTTP server so the OS releases the port
+// immediately instead of leaving sockets in CLOSE_WAIT state.
+function shutdown() {
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 3000).unref();
+}
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);

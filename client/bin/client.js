@@ -55,8 +55,23 @@ server.on("error", (err) => {
     console.error(
       `❌  MCP Inspector PORT IS IN USE at http://${host}:${port} ❌ `,
     );
+    const fixCommand =
+      process.platform === "win32"
+        ? `netstat -ano | findstr :${port}`
+        : `lsof -ti:${port} | xargs kill -9`;
+    console.error(`💡 To fix: run "${fixCommand}" to free the port.`);
+    process.exit(1);
   } else {
     throw err;
   }
 });
 server.listen(port, host);
+
+// Graceful shutdown: close the HTTP server so the OS releases the port
+// immediately instead of leaving sockets in CLOSE_WAIT state.
+function shutdown() {
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 3000).unref();
+}
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);

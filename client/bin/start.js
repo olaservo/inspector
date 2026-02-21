@@ -5,12 +5,31 @@ import { resolve, dirname } from "path";
 import { spawnPromise, spawn } from "spawn-rx";
 import { fileURLToPath } from "url";
 import { randomBytes } from "crypto";
+import { createServer as createNetServer } from "net";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_MCP_PROXY_LISTEN_PORT = "6277";
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms, true));
+}
+
+function checkPort(host, port) {
+  return new Promise((resolve) => {
+    const tester = createNetServer();
+    tester.once("error", () => resolve(false));
+    tester.once("listening", () => tester.close(() => resolve(true)));
+    tester.listen(port, host);
+  });
+}
+
+function portInUseMessage(port, label) {
+  const fixCommand =
+    process.platform === "win32"
+      ? `netstat -ano | findstr :${port}`
+      : `lsof -ti:${port} | xargs kill -9`;
+  const envVar = label === "Client" ? "CLIENT_PORT" : "SERVER_PORT";
+  return `❌ Port ${port} (${label}) is already in use.\n💡 To fix: run "${fixCommand}" to free the port, or set ${envVar} to use a different port.`;
 }
 
 function getClientUrl(port, authDisabled, sessionToken, serverPort) {
@@ -284,6 +303,21 @@ async function main() {
       : "Starting MCP inspector...",
   );
 
+  // Pre-flight port availability check
+  const host = process.env.HOST || "localhost";
+
+  const serverPortFree = await checkPort(host, parseInt(SERVER_PORT, 10));
+  if (!serverPortFree) {
+    console.error(portInUseMessage(SERVER_PORT, "Server"));
+    process.exit(1);
+  }
+
+  const clientPortFree = await checkPort(host, parseInt(CLIENT_PORT, 10));
+  if (!clientPortFree) {
+    console.error(portInUseMessage(CLIENT_PORT, "Client"));
+    process.exit(1);
+  }
+
   // Use provided token from environment or generate a new one
   const sessionToken =
     process.env.MCP_PROXY_AUTH_TOKEN || randomBytes(32).toString("hex");
@@ -292,10 +326,13 @@ async function main() {
   const abort = new AbortController();
 
   let cancelled = false;
-  process.on("SIGINT", () => {
+  function handleShutdown() {
+    if (cancelled) return;
     cancelled = true;
     abort.abort();
-  });
+  }
+  process.on("SIGINT", handleShutdown);
+  process.on("SIGTERM", handleShutdown);
 
   let server, serverOk;
 
